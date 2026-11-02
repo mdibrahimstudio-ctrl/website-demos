@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ember &amp; Oak Coffee — Portland, OR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brown:#4a2e1f; --brown-dark:#33200f; --coffee:#6f4e37; --caramel:#c08552;
+    --cream:#faf5ec; --cream-2:#f3e9d7; --ink:#2b1c12; --muted:#7a6753;
+    --radius:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink);background:var(--cream);line-height:1.6}
+  h1,h2,h3{font-family:'Fraunces',Georgia,'Times New Roman',serif;line-height:1.2;color:var(--brown-dark)}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+  a{text-decoration:none}
+
+  /* Nav */
+  header{position:sticky;top:0;z-index:50;background:rgba(51,32,15,.96);backdrop-filter:blur(6px)}
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+  .logo{display:flex;align-items:center;gap:10px;color:var(--cream);font-family:'Fraunces',Georgia,serif;font-size:1.25rem;font-weight:700}
+  .logo svg{flex:none}
+  .nav-links{display:flex;gap:26px}
+  .nav-links a{color:#e9dcc6;font-size:.95rem;font-weight:500}
+  .nav-links a:hover{color:var(--caramel)}
+  .nav-cta{background:var(--caramel);color:#fff !important;padding:8px 16px;border-radius:999px;font-weight:600}
+  .nav-cta:hover{background:#a96f3e}
+
+  /* Hero */
+  .hero{background:linear-gradient(135deg,#33200f 0%,#4a2e1f 45%,#6f4e37 100%);color:var(--cream);padding:84px 0 76px;text-align:center;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;inset:auto -10% -60% -10%;height:70%;background:radial-gradient(ellipse at center,rgba(192,133,82,.35),transparent 70%);pointer-events:none}
+  .hero .kicker{letter-spacing:.22em;text-transform:uppercase;font-size:.78rem;color:var(--caramel);font-weight:600}
+  .hero h1{color:var(--cream);font-size:clamp(2.3rem,6vw,3.6rem);margin:14px auto 16px;max-width:720px}
+  .hero p{max-width:560px;margin:0 auto 30px;color:#e9dcc6;font-size:1.08rem}
+  .btn{display:inline-block;padding:14px 30px;border-radius:999px;font-weight:600;font-size:1rem;transition:transform .15s ease,background .15s ease,box-shadow .15s ease}
+  .btn-primary{background:var(--caramel);color:#fff;box-shadow:0 8px 20px rgba(0,0,0,.25)}
+  .btn-primary:hover{background:#a96f3e;transform:translateY(-2px)}
+  .btn-ghost{border:2px solid rgba(250,245,236,.5);color:var(--cream);margin-left:10px}
+  .btn-ghost:hover{border-color:var(--cream);transform:translateY(-2px)}
+
+  section{padding:68px 0}
+  .section-head{text-align:center;max-width:620px;margin:0 auto 40px}
+  .section-head .kicker{letter-spacing:.2em;text-transform:uppercase;font-size:.75rem;color:var(--caramel);font-weight:700}
+  .section-head h2{font-size:clamp(1.7rem,4vw,2.3rem);margin:10px 0 12px}
+  .section-head p{color:var(--muted)}
+
+  /* About */
+  .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:center}
+  .about-art{border-radius:var(--radius);background:linear-gradient(150deg,#6f4e37,#4a2e1f);min-height:300px;display:flex;align-items:center;justify-content:center;padding:34px}
+  .about-art svg{max-width:230px;width:100%;height:auto}
+  .about-grid h2{font-size:1.9rem;margin-bottom:14px}
+  .about-grid p{color:var(--muted);margin-bottom:14px}
+  .stats{display:flex;gap:34px;margin-top:22px}
+  .stats div strong{display:block;font-family:'Fraunces',Georgia,serif;font-size:1.6rem;color:var(--brown)}
+  .stats div span{font-size:.85rem;color:var(--muted)}
+
+  /* Menu */
+  .menu-sec{background:var(--cream-2)}
+  .menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .menu-card{background:#fff;border-radius:var(--radius);padding:24px;box-shadow:0 4px 14px rgba(74,46,31,.08);transition:transform .15s ease,box-shadow .15s ease}
+  .menu-card:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(74,46,31,.14)}
+  .menu-card .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .menu-card h3{font-size:1.12rem}
+  .price{font-family:'Fraunces',Georgia,serif;font-weight:700;color:var(--caramel);font-size:1.1rem;white-space:nowrap}
+  .menu-card p{color:var(--muted);font-size:.93rem;margin-top:8px}
+  .tag{display:inline-block;margin-top:12px;font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:var(--cream-2);color:var(--coffee);padding:4px 10px;border-radius:999px}
+
+  /* Reviews */
+  .reviews-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .review{background:#fff;border-radius:var(--radius);padding:26px;box-shadow:0 4px 14px rgba(74,46,31,.08)}
+  .stars{color:#d99a3d;font-size:1rem;letter-spacing:2px}
+  .review p{margin:12px 0 16px;color:#4c3a2b}
+  .review .who{font-weight:600;font-size:.92rem}
+  .review .who span{display:block;font-weight:400;color:var(--muted);font-size:.82rem}
+
+  /* Visit */
+  .visit-sec{background:var(--brown-dark);color:var(--cream)}
+  .visit-grid{display:grid;grid-template-columns:1fr 1fr;gap:44px}
+  .visit-sec h2{color:var(--cream);font-size:1.9rem;margin-bottom:16px}
+  .visit-sec p{color:#d9c9ae}
+  .hours{width:100%;border-collapse:collapse;margin-top:8px}
+  .hours td{padding:9px 0;border-bottom:1px solid rgba(250,245,236,.15);color:#e9dcc6}
+  .hours td:last-child{text-align:right;font-weight:600;color:var(--cream)}
+  .visit-card{background:rgba(250,245,236,.06);border:1px solid rgba(250,245,236,.14);border-radius:var(--radius);padding:26px}
+  .visit-card h3{color:var(--cream);margin-bottom:10px}
+
+  footer{background:#241708;color:#b8a888;padding:30px 0;text-align:center;font-size:.88rem}
+  footer .fname{font-family:'Fraunces',Georgia,serif;color:var(--cream);font-size:1.05rem;margin-bottom:6px}
+  footer .demo{margin-top:10px;font-size:.78rem;color:#8d7c60;font-style:italic}
+
+  @media (max-width:820px){
+    .menu-grid,.reviews-grid{grid-template-columns:1fr 1fr}
+    .about-grid,.visit-grid{grid-template-columns:1fr}
+  }
+  @media (max-width:560px){
+    .nav-links a:not(.nav-cta){display:none}
+    .menu-grid,.reviews-grid{grid-template-columns:1fr}
+    .hero{padding:60px 0 56px}
+    .btn-ghost{margin-left:0;margin-top:10px}
+    .stats{gap:22px}
+    section{padding:52px 0}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="logo" href="#">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9h13v6a5 5 0 0 1-5 5h-3a5 5 0 0 1-5-5V9Z" fill="#c08552"/><path d="M17 10h1.2a2.8 2.8 0 0 1 0 5.6H17" stroke="#c08552" stroke-width="1.8"/><path d="M8 3c0 1.2-1 1.6-1 2.8M12 3c0 1.2-1 1.6-1 2.8" stroke="#e9dcc6" stroke-width="1.6" stroke-linecap="round"/></svg>
+      Ember &amp; Oak
+    </a>
+    <nav class="nav-links">
+      <a href="#about">About</a>
+      <a href="#menu">Menu</a>
+      <a href="#reviews">Reviews</a>
+      <a href="#visit" class="nav-cta">Visit Us</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <p class="kicker">Small-batch roastery · Portland, OR</p>
+    <h1>Slow mornings, seriously good coffee.</h1>
+    <p>Single-origin beans roasted in-house every week, pastries from local bakers, and a corner seat with your name on it.</p>
+    <a class="btn btn-primary" href="#menu">See the menu</a>
+    <a class="btn btn-ghost" href="#visit">Opening hours</a>
+  </div>
+</section>
+
+<section id="about">
+  <div class="wrap about-grid">
+    <div class="about-art" aria-hidden="true">
+      <svg viewBox="0 0 200 200" fill="none"><circle cx="100" cy="100" r="88" stroke="#c08552" stroke-width="2" stroke-dasharray="5 7"/><path d="M55 88h78v34a33 33 0 0 1-33 33h-12a33 33 0 0 1-33-33V88Z" fill="#faf5ec"/><path d="M133 94h6a16 16 0 0 1 0 32h-8" stroke="#faf5ec" stroke-width="7"/><path d="M78 52c0 8-6 10-6 18M98 48c0 8-6 10-6 18M118 52c0 8-6 10-6 18" stroke="#c08552" stroke-width="6" stroke-linecap="round"/><ellipse cx="94" cy="172" rx="52" ry="6" fill="#c08552" opacity=".55"/></svg>
+    </div>
+    <div>
+      <h2>A neighbourhood café, roasted the slow way</h2>
+      <p>Ember &amp; Oak started in 2016 with a secondhand roaster and a simple idea: coffee tastes better when nobody is in a hurry. We buy from small farms we can name, roast in small batches, and bake our pastries fresh each morning.</p>
+      <p>Whether you are grabbing a flat white on the way to work or settling in with a book for the afternoon, there is always a warm seat waiting.</p>
+      <div class="stats">
+        <div><strong>9+</strong><span>Years roasting</span></div>
+        <div><strong>14</strong><span>Farm partners</span></div>
+        <div><strong>4.9★</strong><span>Average rating</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="menu" class="menu-sec">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="kicker">Menu highlights</p>
+      <h2>Favourites from the counter</h2>
+      <p>Our full menu changes with the seasons — these are the ones regulars keep coming back for.</p>
+    </div>
+    <div class="menu-grid">
+      <div class="menu-card">
+        <div class="top"><h3>Ember Latte</h3><span class="price">$5.50</span></div>
+        <p>Double espresso, smoked-maple syrup and velvety steamed milk, finished with a pinch of sea salt.</p>
+        <span class="tag">House signature</span>
+      </div>
+      <div class="menu-card">
+        <div class="top"><h3>Single-Origin Pour Over</h3><span class="price">$6.00</span></div>
+        <p>This week's Ethiopian Yirgacheffe, brewed by hand. Bright, floral, with notes of apricot and honey.</p>
+        <span class="tag">Rotating roast</span>
+      </div>
+      <div class="menu-card">
+        <div class="top"><h3>Cardamom Cold Brew</h3><span class="price">$5.75</span></div>
+        <p>Steeped for 18 hours with crushed cardamom and orange peel. Smooth, dark and quietly spiced.</p>
+        <span class="tag">Summer favourite</span>
+      </div>
+      <div class="menu-card">
+        <div class="top"><h3>Brown Butter Croissant</h3><span class="price">$4.25</span></div>
+        <p>Flaky, golden and baked at sunrise. Ask for it warm with our house-made berry jam.</p>
+        <span class="tag">Baked daily</span>
+      </div>
+      <div class="menu-card">
+        <div class="top"><h3>Golden Turmeric Latte</h3><span class="price">$5.25</span></div>
+        <p>Caffeine-free and cosy: turmeric, ginger, cinnamon and oat milk with a touch of honey.</p>
+        <span class="tag">No caffeine</span>
+      </div>
+      <div class="menu-card">
+        <div class="top"><h3>Avocado &amp; Whipped Feta Toast</h3><span class="price">$9.50</span></div>
+        <p>Thick-cut sourdough, whipped feta, smashed avocado, chilli crunch and a soft-boiled egg.</p>
+        <span class="tag">Brunch</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="reviews">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="kicker">Reviews</p>
+      <h2>What the neighbourhood says</h2>
+    </div>
+    <div class="reviews-grid">
+      <div class="review">
+        <div class="stars">★★★★★</div>
+        <p>"The Ember Latte is genuinely the best coffee I've had in Portland. Staff remember your name by the second visit."</p>
+        <p class="who">Maya R.<span>Regular since 2019</span></p>
+      </div>
+      <div class="review">
+        <div class="stars">★★★★★</div>
+        <p>"My remote office three days a week. Fast wifi, plenty of plugs, and nobody ever rushes you out the door."</p>
+        <p class="who">Daniel K.<span>Freelance designer</span></p>
+      </div>
+      <div class="review">
+        <div class="stars">★★★★★</div>
+        <p>"Croissants sell out by ten for a reason. We drive across town every Saturday just for brunch here."</p>
+        <p class="who">Priya &amp; Tom S.<span>Weekend regulars</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="visit" class="visit-sec">
+  <div class="wrap visit-grid">
+    <div>
+      <h2>Opening hours</h2>
+      <table class="hours">
+        <tr><td>Monday – Friday</td><td>7:00 AM – 6:00 PM</td></tr>
+        <tr><td>Saturday</td><td>8:00 AM – 6:00 PM</td></tr>
+        <tr><td>Sunday</td><td>8:00 AM – 4:00 PM</td></tr>
+        <tr><td>Public holidays</td><td>9:00 AM – 3:00 PM</td></tr>
+      </table>
+    </div>
+    <div class="visit-card">
+      <h3>Find us</h3>
+      <p>214 Alder Street<br>Portland, OR 97204</p>
+      <p style="margin-top:14px">hello@emberandoak.example<br>(503) 555-0184</p>
+      <p style="margin-top:14px">Street parking on Alder &amp; 2nd · Bike racks out front · Dogs welcome on the patio.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="fname">Ember &amp; Oak Coffee</p>
+    <p>214 Alder Street, Portland, OR · (503) 555-0184 · hello@emberandoak.example</p>
+    <p class="demo">Demo website — portfolio sample. Fictional business created to showcase web design work.</p>
+  </div>
+</footer>
+
+</body>
+</html>

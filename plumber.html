@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RapidFlow Plumbing — 24/7 Emergency Plumber</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue:#0b5cad; --blue-dark:#073d75; --blue-deep:#052c54;
+    --sky:#e8f2fb; --accent:#f59e0b; --accent-dark:#d97706;
+    --ink:#12212f; --muted:#5b6d7d; --radius:12px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink);background:#fff;line-height:1.6}
+  h1,h2,h3{font-family:'Archivo','Inter',system-ui,sans-serif;line-height:1.2;color:var(--blue-deep)}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+  a{text-decoration:none}
+
+  /* Top strip + nav */
+  .topstrip{background:var(--blue-deep);color:#cfe4f8;font-size:.85rem;padding:7px 0;text-align:center}
+  .topstrip strong{color:#fff}
+  header{position:sticky;top:0;z-index:50;background:#fff;box-shadow:0 2px 12px rgba(5,44,84,.1)}
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:13px 0;gap:12px}
+  .logo{display:flex;align-items:center;gap:10px;font-family:'Archivo',sans-serif;font-weight:800;font-size:1.3rem;color:var(--blue-deep)}
+  .logo .flow{color:var(--blue)}
+  .nav-links{display:flex;gap:24px;align-items:center}
+  .nav-links a{color:var(--ink);font-size:.95rem;font-weight:500}
+  .nav-links a:hover{color:var(--blue)}
+  .call-btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#1c1206 !important;font-weight:700;padding:10px 18px;border-radius:8px;transition:background .15s ease,transform .15s ease;white-space:nowrap}
+  .call-btn:hover{background:var(--accent-dark);color:#fff !important;transform:translateY(-1px)}
+
+  /* Hero */
+  .hero{background:linear-gradient(140deg,var(--blue-deep) 0%,var(--blue-dark) 55%,var(--blue) 100%);color:#fff;padding:74px 0 68px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;right:-140px;top:-140px;width:460px;height:460px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,.28),transparent 65%);pointer-events:none}
+  .hero-grid{display:grid;grid-template-columns:1.25fr .85fr;gap:40px;align-items:center;position:relative;z-index:1}
+  .hero .badge{display:inline-block;background:rgba(245,158,11,.18);border:1px solid rgba(245,158,11,.55);color:#ffd58a;font-weight:600;font-size:.83rem;padding:5px 14px;border-radius:999px;letter-spacing:.04em}
+  .hero h1{color:#fff;font-size:clamp(2.1rem,5.4vw,3.3rem);margin:16px 0 14px}
+  .hero h1 .hl{color:var(--accent)}
+  .hero p{color:#d6e7f7;font-size:1.07rem;max-width:520px;margin-bottom:28px}
+  .hero-ctas{display:flex;flex-wrap:wrap;gap:12px}
+  .btn{display:inline-flex;align-items:center;gap:9px;padding:15px 28px;border-radius:8px;font-weight:700;font-size:1rem;transition:transform .15s ease,background .15s ease}
+  .btn-call{background:var(--accent);color:#1c1206;box-shadow:0 10px 24px rgba(0,0,0,.28)}
+  .btn-call:hover{background:var(--accent-dark);color:#fff;transform:translateY(-2px)}
+  .btn-outline{border:2px solid rgba(255,255,255,.55);color:#fff}
+  .btn-outline:hover{border-color:#fff;transform:translateY(-2px)}
+  .hero-card{background:#fff;color:var(--ink);border-radius:var(--radius);padding:24px;box-shadow:0 16px 36px rgba(0,0,0,.25)}
+  .hero-card h3{font-size:1.05rem;margin-bottom:12px}
+  .hero-card ul{list-style:none}
+  .hero-card li{padding:8px 0;border-bottom:1px solid #eef3f8;display:flex;gap:10px;align-items:flex-start;font-size:.95rem}
+  .hero-card li:last-child{border-bottom:none}
+  .tick{color:#1d9d5f;font-weight:800;flex:none}
+  .hero-card .price-note{margin-top:12px;background:var(--sky);border-radius:8px;padding:10px 14px;font-size:.9rem;color:var(--blue-dark);font-weight:600}
+
+  section{padding:64px 0}
+  .section-head{text-align:center;max-width:640px;margin:0 auto 40px}
+  .section-head .kicker{letter-spacing:.18em;text-transform:uppercase;font-size:.75rem;color:var(--blue);font-weight:700}
+  .section-head h2{font-size:clamp(1.7rem,4vw,2.3rem);margin:10px 0 12px}
+  .section-head p{color:var(--muted)}
+
+  /* Services */
+  .services-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+  .service{background:#fff;border:1px solid #e3ecf4;border-radius:var(--radius);padding:26px;display:flex;gap:18px;transition:box-shadow .15s ease,transform .15s ease,border-color .15s ease}
+  .service:hover{box-shadow:0 12px 28px rgba(11,92,173,.13);transform:translateY(-3px);border-color:#c4dcee}
+  .service .icon{flex:none;width:52px;height:52px;border-radius:12px;background:var(--sky);display:flex;align-items:center;justify-content:center}
+  .service h3{font-size:1.15rem;margin-bottom:6px}
+  .service p{color:var(--muted);font-size:.95rem}
+  .service .from{display:inline-block;margin-top:10px;font-weight:700;color:var(--blue);font-size:.9rem}
+
+  /* Why us */
+  .why-sec{background:var(--sky)}
+  .why-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+  .why{background:#fff;border-radius:var(--radius);padding:24px;text-align:center;box-shadow:0 3px 10px rgba(5,44,84,.06)}
+  .why .num{font-family:'Archivo',sans-serif;font-weight:800;font-size:1.9rem;color:var(--blue)}
+  .why h3{font-size:1.02rem;margin:6px 0}
+  .why p{color:var(--muted);font-size:.9rem}
+
+  /* Reviews */
+  .reviews-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .review{border:1px solid #e3ecf4;border-radius:var(--radius);padding:26px;background:#fff}
+  .stars{color:var(--accent);letter-spacing:2px}
+  .review p{margin:12px 0 16px;color:#33475a}
+  .review .who{font-weight:600;font-size:.92rem}
+  .review .who span{display:block;font-weight:400;color:var(--muted);font-size:.82rem}
+
+  /* Area / contact */
+  .area-sec{background:var(--blue-deep);color:#d6e7f7}
+  .area-grid{display:grid;grid-template-columns:1fr 1fr;gap:44px}
+  .area-sec h2{color:#fff;font-size:1.9rem;margin-bottom:14px}
+  .area-list{display:flex;flex-wrap:wrap;gap:9px;margin-top:6px}
+  .area-list span{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);padding:5px 13px;border-radius:999px;font-size:.88rem;color:#eaf3fc}
+  .hours{width:100%;border-collapse:collapse}
+  .hours td{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.14);color:#d6e7f7}
+  .hours td:last-child{text-align:right;font-weight:600;color:#fff}
+  .area-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:var(--radius);padding:26px;margin-top:20px}
+  .area-card .big{font-family:'Archivo',sans-serif;font-weight:800;font-size:1.6rem;color:#fff}
+
+  footer{background:#04223f;color:#8fb0cd;padding:30px 0;text-align:center;font-size:.88rem}
+  footer .fname{font-family:'Archivo',sans-serif;font-weight:800;color:#fff;font-size:1.05rem;margin-bottom:6px}
+  footer .demo{margin-top:10px;font-size:.78rem;color:#5f7f9e;font-style:italic}
+
+  @media (max-width:900px){
+    .hero-grid{grid-template-columns:1fr}
+    .why-grid{grid-template-columns:1fr 1fr}
+    .reviews-grid{grid-template-columns:1fr 1fr}
+    .area-grid{grid-template-columns:1fr}
+  }
+  @media (max-width:560px){
+    .nav-links a:not(.call-btn){display:none}
+    .services-grid,.reviews-grid{grid-template-columns:1fr}
+    .service{flex-direction:column;gap:12px}
+    .hero{padding:54px 0}
+    section{padding:50px 0}
+    .topstrip{font-size:.78rem}
+  }
+</style>
+</head>
+<body>
+
+<div class="topstrip">⚡ Average emergency arrival: <strong>under 60 minutes</strong> in the Denver metro area</div>
+
+<header>
+  <div class="wrap nav">
+    <a class="logo" href="#">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3c3.2 4.4 6.3 7.9 6.3 11a6.3 6.3 0 1 1-12.6 0C5.7 10.9 8.8 7.4 12 3Z" fill="#0b5cad"/><path d="M9.3 14.3a2.8 2.8 0 0 0 2.7 2.9" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+      Rapid<span class="flow">Flow</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#services">Services</a>
+      <a href="#why">Why us</a>
+      <a href="#reviews">Reviews</a>
+      <a href="#area">Service area</a>
+      <a class="call-btn" href="tel:+13035550137">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" fill="currentColor"/></svg>
+        (303) 555-0137
+      </a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="badge">Licensed &amp; insured · 24/7 emergency service</span>
+      <h1>Burst pipe? Blocked drain?<br>We fix it <span class="hl">today.</span></h1>
+      <p>RapidFlow Plumbing serves homes across the Denver metro area. Upfront flat-rate pricing, tidy work, and a 2-year guarantee on every repair.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-call" href="tel:+13035550137">📞 Call now — 24/7 emergency</a>
+        <a class="btn btn-outline" href="#services">See services</a>
+      </div>
+    </div>
+    <div class="hero-card">
+      <h3>Every job includes:</h3>
+      <ul>
+        <li><span class="tick">✓</span> Upfront flat-rate quote before we start — no hourly surprises</li>
+        <li><span class="tick">✓</span> Licensed, insured local plumbers (never subcontractors)</li>
+        <li><span class="tick">✓</span> Shoe covers &amp; full clean-up — we leave it tidier than we found it</li>
+        <li><span class="tick">✓</span> 2-year workmanship guarantee in writing</li>
+      </ul>
+      <p class="price-note">No call-out fee when you book the repair with us.</p>
+    </div>
+  </div>
+</section>
+
+<section id="services">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="kicker">What we do</p>
+      <h2>Plumbing services</h2>
+      <p>From 2 AM emergencies to planned upgrades — one call handles it all.</p>
+    </div>
+    <div class="services-grid">
+      <div class="service">
+        <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 4.5 13.5H11L9.8 22 19 9.5h-6.5L13 2Z" fill="#f59e0b" stroke="#d97706" stroke-width="1.2" stroke-linejoin="round"/></svg></div>
+        <div>
+          <h3>Emergency Repairs</h3>
+          <p>Burst pipes, major leaks, overflowing toilets. We answer around the clock and aim to be at your door within the hour.</p>
+          <span class="from">Available 24/7 · from $149</span>
+        </div>
+      </div>
+      <div class="service">
+        <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="#0b5cad" stroke-width="2"/><path d="M12 7a5 5 0 0 1 5 5M12 17a5 5 0 0 1-5-5" stroke="#0b5cad" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <div>
+          <h3>Drain Cleaning &amp; Unblocking</h3>
+          <p>Slow or fully blocked drains cleared with professional augers and hydro-jetting, plus a camera check to find the cause.</p>
+          <span class="from">Same-day · from $99</span>
+        </div>
+      </div>
+      <div class="service">
+        <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="3" stroke="#0b5cad" stroke-width="2"/><path d="M12 7c1.6 2 2.6 3.2 2.6 4.4a2.6 2.6 0 1 1-5.2 0C9.4 10.2 10.4 9 12 7Z" fill="#f59e0b"/></svg></div>
+        <div>
+          <h3>Water Heaters</h3>
+          <p>Repairs, replacements and high-efficiency tankless installations. Most standard heaters swapped the same day.</p>
+          <span class="from">Repair from $179 · install from $1,450</span>
+        </div>
+      </div>
+      <div class="service">
+        <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14.5 6.5a4 4 0 0 1 5.6-3.7l-2.6 2.6 1.4 2.8 3-1A4 4 0 0 1 18 13.4L8.2 23.2a2 2 0 0 1-2.8 0l-2.6-2.6a2 2 0 0 1 0-2.8L12.5 8a4 4 0 0 0 2-1.5Z" transform="scale(.92) translate(1 .5)" fill="#0b5cad"/></svg></div>
+        <div>
+          <h3>Installations &amp; Remodels</h3>
+          <p>New bathrooms, kitchen plumbing, fixture upgrades and whole-home repiping — planned properly, finished on schedule.</p>
+          <span class="from">Free written estimates</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why" class="why-sec">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="kicker">Why RapidFlow</p>
+      <h2>The plumber neighbours recommend</h2>
+    </div>
+    <div class="why-grid">
+      <div class="why"><div class="num">&lt; 60 min</div><h3>Fast response</h3><p>Average emergency arrival time across the Denver metro area.</p></div>
+      <div class="why"><div class="num">Flat-rate</div><h3>No surprises</h3><p>You approve the exact price before any work begins. Always.</p></div>
+      <div class="why"><div class="num">2 years</div><h3>Guaranteed work</h3><p>Every repair backed by a written 2-year workmanship guarantee.</p></div>
+      <div class="why"><div class="num">4.9 ★</div><h3>900+ reviews</h3><p>Rated 4.9 out of 5 by local homeowners across 900+ jobs.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="reviews">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="kicker">Reviews</p>
+      <h2>Recent jobs, real words</h2>
+    </div>
+    <div class="reviews-grid">
+      <div class="review">
+        <div class="stars">★★★★★</div>
+        <p>"Pipe burst at midnight, water everywhere. They answered on the second ring and had it fixed by 2 AM. Absolute lifesavers."</p>
+        <p class="who">Marcus T.<span>Emergency repair, Aurora</span></p>
+      </div>
+      <div class="review">
+        <div class="stars">★★★★★</div>
+        <p>"Quoted me a flat price on the phone and charged exactly that. Showed me the camera footage of the blocked drain before clearing it."</p>
+        <p class="who">Elena V.<span>Drain cleaning, Lakewood</span></p>
+      </div>
+      <div class="review">
+        <div class="stars">★★★★★</div>
+        <p>"New water heater installed the same morning I called. Tidy, polite, and they took the old unit away. Couldn't ask for more."</p>
+        <p class="who">David &amp; Sue H.<span>Water heater install, Arvada</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="area" class="area-sec">
+  <div class="wrap area-grid">
+    <div>
+      <h2>Service area &amp; hours</h2>
+      <p>We cover the Denver metro area, including:</p>
+      <div class="area-list">
+        <span>Denver</span><span>Aurora</span><span>Lakewood</span><span>Arvada</span>
+        <span>Thornton</span><span>Westminster</span><span>Centennial</span><span>Littleton</span>
+        <span>Englewood</span><span>Golden</span>
+      </div>
+      <div class="area-card">
+        <p style="margin-bottom:6px">Call any time — day or night:</p>
+        <p class="big">(303) 555-0137</p>
+        <p style="margin-top:6px">dispatch@rapidflow.example</p>
+      </div>
+    </div>
+    <div>
+      <h2>Hours</h2>
+      <table class="hours">
+        <tr><td>Emergency service</td><td>24 hours · 7 days</td></tr>
+        <tr><td>Office &amp; bookings (Mon–Fri)</td><td>7:00 AM – 7:00 PM</td></tr>
+        <tr><td>Office &amp; bookings (Saturday)</td><td>8:00 AM – 4:00 PM</td></tr>
+        <tr><td>Planned installations</td><td>By appointment</td></tr>
+      </table>
+      <p style="margin-top:16px">Not sure if it's an emergency? Call anyway — we'll tell you honestly whether it can wait until morning, free of charge.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="fname">RapidFlow Plumbing</p>
+    <p>Denver metro area · (303) 555-0137 · dispatch@rapidflow.example · Licence #MP-0482 (fictional)</p>
+    <p class="demo">Demo website — portfolio sample. Fictional business created to showcase web design work.</p>
+  </div>
+</footer>
+
+</body>
+</html>
