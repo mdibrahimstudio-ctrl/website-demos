@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>For Alexa Nails — Your Salon, Beautifully Online</title>
+<meta name="description" content="A special presentation for Alexa Nails: see your free demo, and imagine your own professional website.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --plum:#2b2129; --plum2:#46363d; --rose:#c98a6b; --rose2:#b5734f;
+    --cream:#f7f1ec; --sand:#efe3da; --line:#d9c8c2; --ink:#3a2d33;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line-height:1.6;overflow-x:hidden}
+  h1,h2,h3{font-family:'Playfair Display',serif;font-weight:600;line-height:1.2}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 22px}
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .8s ease,transform .8s ease}
+  .reveal.in{opacity:1;transform:none}
+
+  /* HERO */
+  .hero{background:radial-gradient(1100px 600px at 85% -10%,#6e4a3f 0%,transparent 55%),radial-gradient(900px 520px at -10% 110%,#54383f 0%,transparent 50%),linear-gradient(160deg,#241a21 0%,var(--plum) 45%,#3a2731 100%);color:var(--cream);padding:84px 0 90px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(201,138,107,.20) 1.2px,transparent 1.3px);background-size:26px 26px;opacity:.35;pointer-events:none}
+  .hero .wrap{position:relative;z-index:1;display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center}
+  .badge{display:inline-block;border:1px solid rgba(201,138,107,.65);color:#eccbb6;border-radius:999px;padding:7px 16px;font-size:.82rem;letter-spacing:.22em;text-transform:uppercase;margin-bottom:24px;background:rgba(201,138,107,.10)}
+  .hero h1{font-size:clamp(2.4rem,5.4vw,3.9rem);color:#fdf8f4}
+  .hero h1 em{color:var(--rose);font-style:italic}
+  .hero p.lead{margin:22px 0 32px;font-size:1.14rem;font-weight:300;color:#e9dcd2;max-width:34rem}
+  .btn{display:inline-block;background:linear-gradient(135deg,var(--rose),var(--rose2));color:#fff;text-decoration:none;padding:16px 32px;border-radius:999px;font-weight:600;letter-spacing:.04em;font-size:1.02rem;box-shadow:0 14px 30px rgba(181,115,79,.38);transition:transform .25s ease,box-shadow .25s ease}
+  .btn:hover{transform:translateY(-3px);box-shadow:0 20px 38px rgba(181,115,79,.45)}
+  .btn.ghost{background:transparent;border:1.5px solid rgba(247,241,236,.5);box-shadow:none;color:var(--cream);margin-left:10px}
+  .hero .note{margin-top:18px;font-size:.92rem;color:#cdbcae}
+
+  /* PHONE MOCK */
+  .phone{width:min(300px,80vw);margin:0 auto;background:#171216;border-radius:44px;padding:12px;box-shadow:0 34px 70px rgba(0,0,0,.5),0 0 0 2px #4a3a42;animation:float 6s ease-in-out infinite}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  .screen{background:var(--cream);border-radius:34px;overflow:hidden;color:var(--ink)}
+  .screen .top{background:linear-gradient(150deg,#3a2731,var(--plum));color:var(--cream);padding:22px 18px 16px;text-align:center}
+  .screen .top .salon{font-family:'Playfair Display',serif;font-size:1.25rem}
+  .screen .top .sub{font-size:.68rem;letter-spacing:.28em;text-transform:uppercase;color:#d8bda9;margin-top:4px}
+  .screen .book{display:block;margin:14px 18px 4px;background:linear-gradient(135deg,var(--rose),var(--rose2));color:#fff;text-align:center;padding:11px;border-radius:999px;font-weight:600;font-size:.9rem}
+  .svc{padding:10px 18px 4px}
+  .svc div{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--line);font-size:.86rem}
+  .svc div b{color:var(--rose2)}
+  .stars{text-align:center;padding:12px 10px 18px;font-size:.82rem;color:#7a6560}
+  .stars span{color:var(--rose2);letter-spacing:.2em}
+
+  section{padding:78px 0}
+  .kicker{text-align:center;letter-spacing:.26em;text-transform:uppercase;font-size:.78rem;color:var(--rose2);font-weight:600;margin-bottom:12px}
+  h2.title{text-align:center;font-size:clamp(1.8rem,4vw,2.6rem);color:var(--plum);max-width:44rem;margin:0 auto 14px}
+  .sub{text-align:center;color:#6e5d64;max-width:38rem;margin:0 auto 44px;font-weight:300;font-size:1.05rem}
+
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .card{background:#fff;border:1px solid #eadbd2;border-radius:20px;padding:28px 24px;box-shadow:0 10px 26px rgba(70,54,61,.07)}
+  .card .ic{font-size:1.7rem;margin-bottom:12px}
+  .card h3{font-size:1.18rem;color:var(--plum);margin-bottom:8px}
+  .card p{font-size:.96rem;color:#6e5d64;font-weight:300}
+
+  /* DEMO VS REAL */
+  .versus{background:linear-gradient(170deg,#fff, var(--sand))}
+  .vs{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:stretch}
+  .col{border-radius:22px;padding:32px 28px}
+  .col.demo{background:#fff;border:1.5px dashed #cbb3a4}
+  .col.real{background:linear-gradient(160deg,var(--plum),#3a2731);color:var(--cream);box-shadow:0 24px 48px rgba(43,33,41,.28);position:relative;overflow:hidden}
+  .col.real::after{content:"✦";position:absolute;top:14px;right:20px;font-size:1.6rem;color:var(--rose)}
+  .col h3{font-size:1.35rem;margin-bottom:6px}
+  .col.demo h3{color:var(--plum)}
+  .col .tag{font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;opacity:.75;margin-bottom:16px}
+  .col ul{list-style:none}
+  .col li{padding:9px 0 9px 28px;position:relative;font-weight:300;font-size:.99rem;border-bottom:1px solid rgba(140,110,95,.16)}
+  .col li:last-child{border-bottom:none}
+  .col li::before{content:"—";position:absolute;left:2px;color:var(--rose2)}
+  .col.real li::before{content:"✦";color:var(--rose)}
+  .centerbtn{text-align:center;margin-top:36px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .step{text-align:center;padding:10px}
+  .step .num{width:58px;height:58px;margin:0 auto 14px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--rose2));color:#fff;font-family:'Playfair Display',serif;font-size:1.4rem;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 24px rgba(181,115,79,.35)}
+  .step h3{color:var(--plum);margin-bottom:6px;font-size:1.15rem}
+  .step p{color:#6e5d64;font-weight:300;font-size:.97rem}
+
+  .letter{background:#fff;border:1px solid #eadbd2;border-radius:24px;padding:42px 38px;max-width:46rem;margin:0 auto;box-shadow:0 18px 40px rgba(70,54,61,.09)}
+  .letter p{margin-bottom:16px;font-weight:300;font-size:1.05rem}
+  .letter .sign{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--plum)}
+  .letter .role{font-size:.85rem;letter-spacing:.18em;text-transform:uppercase;color:var(--rose2)}
+
+  .cta{background:linear-gradient(160deg,var(--plum),#3a2731);color:var(--cream);text-align:center}
+  .cta h2{color:#fdf8f4;font-size:clamp(1.9rem,4.4vw,2.7rem);max-width:40rem;margin:0 auto 14px}
+  .cta p{color:#e0cfc2;font-weight:300;max-width:34rem;margin:0 auto 30px}
+  footer{padding:26px 0;text-align:center;font-size:.86rem;color:#8a7468;background:var(--cream)}
+
+  @media(max-width:820px){
+    .hero .wrap{grid-template-columns:1fr;text-align:center}
+    .hero p.lead{margin-left:auto;margin-right:auto}
+    .grid3,.vs,.steps{grid-template-columns:1fr}
+    .btn.ghost{margin-left:0;margin-top:12px}
+    section{padding:58px 0}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <span class="badge">Made specially for you</span>
+      <h1>Alexa Nails,<br>your salon deserves to <em>shine online</em> too.</h1>
+      <p class="lead">Your nail art makes clients feel beautiful. Now imagine a website that does the same for your salon — elegant, professional, and open for bookings day and night.</p>
+      <a class="btn" href="https://website-demos-lemon.vercel.app/salon.html" target="_blank" rel="noopener">View Your Free Demo ✦</a>
+      <a class="btn ghost" href="#real">See Your Real Website</a>
+      <p class="note">Prepared with care by Ibrahim — Professional Web Developer &amp; Designer</p>
+    </div>
+    <div>
+      <div class="phone" aria-hidden="true">
+        <div class="screen">
+          <div class="top">
+            <div class="salon">Alexa Nails</div>
+            <div class="sub">Nail Studio · Bristol</div>
+          </div>
+          <span class="book">Book an Appointment</span>
+          <div class="svc">
+            <div><span>Gel Extensions</span><b>£—</b></div>
+            <div><span>BIAB Manicure</span><b>£—</b></div>
+            <div><span>Nail Art Design</span><b>£—</b></div>
+            <div><span>Luxury Pedicure</span><b>£—</b></div>
+          </div>
+          <div class="stars"><span>★★★★★</span><br>Loved by clients across Bristol</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <p class="kicker reveal">Inside your demo</p>
+    <h2 class="title reveal">Take a little tour of what we made for you</h2>
+    <p class="sub reveal">The demo shows how your clients would experience your salon online — everything in one beautiful place.</p>
+    <div class="grid3">
+      <div class="card reveal"><div class="ic">💅</div><h3>Your Services &amp; Prices</h3><p>Every treatment laid out clearly, so clients know exactly what you offer before they even message you.</p></div>
+      <div class="card reveal"><div class="ic">📅</div><h3>Easy Booking</h3><p>A booking button that's always there — clients can book in a few taps, even at midnight when you're resting.</p></div>
+      <div class="card reveal"><div class="ic">📸</div><h3>A Gallery of Your Work</h3><p>Your gorgeous nail designs, beautifully shown — the first thing new clients fall in love with.</p></div>
+      <div class="card reveal"><div class="ic">⭐</div><h3>Reviews That Build Trust</h3><p>Happy client words, proudly displayed, so new visitors feel confident choosing you.</p></div>
+      <div class="card reveal"><div class="ic">📍</div><h3>Find You Easily</h3><p>Your location, opening hours and directions — no more clients getting lost or giving up.</p></div>
+      <div class="card reveal"><div class="ic">📱</div><h3>Perfect on Every Phone</h3><p>Most clients find you on their phone. Your site looks flawless and loads fast on any screen.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="versus" id="real">
+  <div class="wrap">
+    <p class="kicker reveal">One honest note</p>
+    <h2 class="title reveal">This is just a demo — your real website would be so much more</h2>
+    <p class="sub reveal">We made the demo quickly, with sample photos and sample prices, just to show you the idea. If you let us build yours, we craft it professionally, around you and only you.</p>
+    <div class="vs">
+      <div class="col demo reveal">
+        <h3>The Demo You Saw</h3>
+        <p class="tag">A taste of the idea</p>
+        <ul>
+          <li>Sample photos that aren't yours</li>
+          <li>Example services &amp; placeholder prices</li>
+          <li>A general salon design</li>
+          <li>Made quickly, to show the concept</li>
+        </ul>
+      </div>
+      <div class="col real reveal">
+        <h3>Your Real Website</h3>
+        <p class="tag">Professionally built for Alexa Nails</p>
+        <ul>
+          <li>Your own stunning nail photos, front and centre</li>
+          <li>Your real services, your real prices</li>
+          <li>Designed in your colours, your style, your name</li>
+          <li>Online booking connected the way you like it</li>
+          <li>Instagram &amp; WhatsApp buttons everywhere</li>
+          <li>Google Maps &amp; your real client reviews</li>
+          <li>Your own website address, e.g. alexanails.co.uk</li>
+          <li>Polished, refined and finished with care</li>
+        </ul>
+      </div>
+    </div>
+    <div class="centerbtn reveal">
+      <a class="btn" href="https://website-demos-lemon.vercel.app/salon.html" target="_blank" rel="noopener">Open the Demo Again ✦</a>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker reveal">How it works</p>
+    <h2 class="title reveal">Three gentle steps between you and your new website</h2>
+    <p class="sub reveal">You don't need to do anything technical. We take care of everything.</p>
+    <div class="steps">
+      <div class="step reveal"><div class="num">1</div><h3>You share your world</h3><p>Send us your favourite nail photos, your services and prices — just as they are.</p></div>
+      <div class="step reveal"><div class="num">2</div><h3>We build it professionally</h3><p>We design and build your website around your salon, and show you every step.</p></div>
+      <div class="step reveal"><div class="num">3</div><h3>You approve, it goes live</h3><p>Only when you truly love it does it go live for your clients to enjoy and book.</p></div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:10px">
+  <div class="wrap">
+    <div class="letter reveal">
+      <p>Dear Alexa,</p>
+      <p>I found your salon while admiring the beautiful work nail artists in Bristol are doing — and yours truly stood out. The care in your designs is the kind of thing clients remember.</p>
+      <p>That's why I made this little demo for you, free and with no obligation at all. I simply wanted you to see how professional and loved your salon could look online — because your work deserves to be seen that way.</p>
+      <p>Have a look whenever you have a quiet moment. If it makes you smile, write back to me on Instagram and we'll talk about making it truly yours.</p>
+      <p class="sign">With admiration,<br>Ibrahim</p>
+      <p class="role">Professional Web Developer &amp; Designer</p>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <div class="wrap">
+    <h2 class="reveal">Ready to see your salon shine?</h2>
+    <p class="reveal">Send me a message on Instagram and tell me what you thought of the demo. I would be honoured to build your real website — beautifully, professionally, and with the same care you give your clients.</p>
+    <a class="btn reveal" href="https://www.instagram.com/mdibrahim.4638" target="_blank" rel="noopener">Message Me on Instagram</a>
+  </div>
+</section>
+
+<footer>Prepared specially for Alexa Nails · Bristol — with care, by Ibrahim, Professional Web Developer &amp; Designer</footer>
+
+<script>
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
