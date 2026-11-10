@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mole Rescue — dig deep, race the flood</title>
+<script src="https://sdk.crazygames.com/crazygames-sdk-v2.js"></script>
+<script>
+  // CrazyGames SDK v2: loading starts now. Fully guarded — silently no-ops
+  // when the game runs outside the portal (file://, other hosts).
+  try{ var _cg=window.CrazyGames&&window.CrazyGames.SDK&&window.CrazyGames.SDK.game;
+    if(_cg&&typeof _cg.sdkGameLoadingStart==='function') _cg.sdkGameLoadingStart(); }catch(e){}
+</script>
+<style>
+  html,body{margin:0;padding:0;background:#14100c;height:100%;overflow:hidden;
+    font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;-webkit-user-select:none;user-select:none;}
+  #wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;}
+  #cap{color:#d8c9a8;font-size:14px;letter-spacing:.4px;text-shadow:0 2px 4px #000;}
+  #cap b{color:#ffd76a;}
+  canvas{background:#241708;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.6),0 0 0 3px #3a2a16;
+    max-width:98vw;max-height:88vh;touch-action:none;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="cap"><b>MOLE RESCUE</b> — Dig ↓ save the babies, race the flood ↑ &nbsp;·&nbsp; WASD / arrows / drag &nbsp;·&nbsp; R retry · N new burrow</div>
+  <canvas id="cv" width="960" height="640"></canvas>
+</div>
+<script>
+'use strict';
+/* ============================================================
+   MOLE RESCUE — an original Scout concept (2026-11-09).
+   You are a mole. A flood is coming. Baby moles are trapped in
+   sealed air pockets underground. Dig down, collect them into a
+   follow-the-leader train, and lead them back up to the surface
+   exit before the rising water floods your own tunnels.
+   Flood model: water fills OPEN cells connected to the surface
+   air ("vented") below the water table. Sealed pockets stay air
+   until you breach them — the game's fiction is the mechanic.
+   ============================================================ */
+
+// ---------- constants ----------
+const W=960, H=640, CELL=32, COLS=30, ROWS=20;
+const DIRT=0, OPEN=1, ROCK=2;
+const SURF_Y=64;                    // bottom of the grass row (rows 0..1 are open air)
+const EXIT={x0:13.5*CELL, x1:16.5*CELL, y1:60};
+const GRACE=6;                      // seconds before the water starts rising
+const RISE0=6.6, RISE_ACCEL=0.012, RISE_PER_BABY=0.55, RISE_CAP=12.5;
+const DIG_TIME=0.30;                // seconds to chew through one dirt cell
+const SPEED_OPEN=172, SPEED_DIG_MIN=26, SPEED_DIG_SPAN=44;
+const BABY_ROWS=[6,9,12,15,18];
+const TRAIL_GAP=30;                 // px of path between train babies
+const LS_KEY='moleRescue.totals.v1';
+
+// ---------- tiny utils ----------
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const lerp=(a,b,k)=>a+(b-a)*k;
+const cellAt=(x,y)=>({c:clamp(Math.floor(x/CELL),0,COLS-1), r:clamp(Math.floor(y/CELL),0,ROWS-1)});
+const idx=(c,r)=>r*COLS+c;
+const center=(c,r)=>({x:c*CELL+16, y:r*CELL+16});
+
+// ---------- persistent totals (long countable tail) ----------
+const totals=(()=>{ try{ const t=JSON.parse(localStorage.getItem(LS_KEY)||'null');
+  if(t && typeof t.best==='number') return t; }catch(e){}
+  return {best:0, totalSaved:0, runs:0}; })();
+function saveTotals(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(totals)); }catch(e){} }
+
+// ---------- audio (all synthesized) ----------
+const Audio8={
+  ctx:null, master:null, noiseBuf:null, waterGain:null, lastCrunch:0, lastBump:0,
+  init(){ if(this.ctx) { if(this.ctx.state==='suspended') this.ctx.resume(); return; }
+    try{
+      const C=new (window.AudioContext||window.webkitAudioContext)();
+      this.ctx=C; this.master=C.createGain(); this.master.gain.value=0.45; this.master.connect(C.destination);
+      const len=C.sampleRate; const buf=C.createBuffer(1,len,C.sampleRate); const d=buf.getChannelData(0);
+      for(let i=0;i<len;i++) d[i]=Math.random()*2-1; this.noiseBuf=buf;
+      // ambient water loop: filtered noise, gain driven by flood proximity
+      const src=C.createBufferSource(); src.buffer=buf; src.loop=true;
+      const lp=C.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=420;
+      this.waterGain=C.createGain(); this.waterGain.gain.value=0.0;
+      src.connect(lp); lp.connect(this.waterGain); this.waterGain.connect(this.master); src.start();
+    }catch(e){}
+  },
+  env(g,t0,a,peak,dur){ g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(peak,t0+a);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur); },
+  tone(freq0,freq1,dur,type,peak,when){ if(!this.ctx) return; const C=this.ctx,t0=C.currentTime+(when||0);
+    const o=C.createOscillator(), g=C.createGain(); o.type=type||'sine';
+    o.frequency.setValueAtTime(freq0,t0); o.frequency.exponentialRampToValueAtTime(Math.max(1,freq1),t0+dur);
+    this.env(g,t0,0.008,peak||0.2,dur); o.connect(g); g.connect(this.master); o.start(t0); o.stop(t0+dur+0.05); },
+  noise(dur,fType,f0,f1,peak,when){ if(!this.ctx) return; const C=this.ctx,t0=C.currentTime+(when||0);
+    const s=C.createBufferSource(); s.buffer=this.noiseBuf; s.loop=true;
+    const f=C.createBiquadFilter(); f.type=fType; f.frequency.setValueAtTime(f0,t0);
+    f.frequency.exponentialRampToValueAtTime(Math.max(20,f1),t0+dur);
+    const g=C.createGain(); g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(peak,t0+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    s.connect(f); f.connect(g); g.connect(this.master); s.start(t0); s.stop(t0+dur+0.05); },
+  crunch(){ const n=performance.now(); if(n-this.lastCrunch<80) return; this.lastCrunch=n;
+    this.noise(0.07,'bandpass',500+Math.random()*500,300,0.22); },
+  bump(){ const n=performance.now(); if(n-this.lastBump<160) return; this.lastBump=n;
+    this.tone(130,70,0.08,'sine',0.18); },
+  chirp(n){ const b=620+n*55; this.tone(b,b*1.34,0.09,'sine',0.22); this.tone(b*1.34,b*1.6,0.1,'sine',0.2,0.07); },
+  pop(){ this.tone(880,1320,0.08,'triangle',0.2); },
+  splash(){ this.noise(0.28,'lowpass',1300,280,0.32); },
+  sad(){ this.tone(320,170,0.34,'sine',0.2); },
+  heartbeat(){ this.tone(58,50,0.11,'sine',0.5); this.tone(55,48,0.09,'sine',0.38,0.16); },
+  win(){ [523,659,784,1046].forEach((f,i)=>this.tone(f,f,0.16,'triangle',0.22,i*0.09)); },
+  lose(){ [392,330,262,196].forEach((f,i)=>this.tone(f,f*0.97,0.2,'triangle',0.2,i*0.13)); },
+  setWater(level){ if(this.waterGain) this.waterGain.gain.setTargetAtTime(clamp(level,0,0.14), this.ctx.currentTime, 0.2); }
+};
+
+// ---------- level generation ----------
+let grid=new Uint8Array(COLS*ROWS), digP=new Float32Array(COLS*ROWS);
+let vented=new Uint8Array(COLS*ROWS), flooded=new Uint8Array(COLS*ROWS);
+let babies=[];
+function genLevel(seed){
+  const rng=mulberry32(seed);
+  grid=new Uint8Array(COLS*ROWS); digP=new Float32Array(COLS*ROWS);
+  vented=new Uint8Array(COLS*ROWS); flooded=new Uint8Array(COLS*ROWS);
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) grid[idx(c,r)] = r<2?OPEN:DIRT;
+  // rocks first
+  for(let r=2;r<ROWS;r++) for(let c=0;c<COLS;c++) if(rng()<0.075) grid[idx(c,r)]=ROCK;
+  // babies in carved plus-shaped pockets at fixed depth rows, seeded columns
+  babies=[]; const usedCols=[];
+  BABY_ROWS.forEach((row,i)=>{
+    let col, tries=0;
+    if(i===0){ // first pocket: 2–3 cells sideways from the natural dig line (col 15),
+      // so digging straight down reveals it within the first seconds of a run
+      const near=[12,13,17,18]; col=near[Math.floor(rng()*near.length)]; }
+    else do{ col=3+Math.floor(rng()*24); tries++; }while(tries<40 && usedCols.some(u=>Math.abs(u-col)<4));
+    usedCols.push(col);
+    const pocket=[[col,row],[col-1,row],[col+1,row],[col,row-1],[col,row+1]];
+    for(const [c,r] of pocket) if(c>=0&&c<COLS&&r>=2&&r<ROWS) grid[idx(c,r)]=OPEN;
+    // guarantee diggable access: no rock within Chebyshev 1 of the pocket
+    for(let r=row-2;r<=row+2;r++) for(let c=col-2;c<=col+2;c++)
+      if(c>=0&&c<COLS&&r>=2&&r<ROWS && grid[idx(c,r)]===ROCK) grid[idx(c,r)]=DIRT;
+    const p=center(col,row);
+    babies.push({id:i, col, row, x:p.x, y:p.y, homeX:p.x, homeY:p.y,
+      depthIdx:row-2, value:100+(row-2)*15, state:'waiting', phase:rng()*6.28, hue:i});
+  });
+  // clean starting shaft under the exit
+  for(let r=2;r<=4;r++) for(let c=13;c<=16;c++) if(grid[idx(c,r)]===ROCK) grid[idx(c,r)]=DIRT;
+  computeFlood(true);
+}
+function computeFlood(force){
+  vented.fill(0);
+  const q=[];
+  for(let c=0;c<COLS;c++) for(let r=0;r<2;r++){ const i=idx(c,r); if(grid[i]===OPEN&&!vented[i]){vented[i]=1;q.push(i);} }
+  while(q.length){ const i=q.pop(); const c=i%COLS, r=(i/COLS)|0;
+    const nb=[[c-1,r],[c+1,r],[c,r-1],[c,r+1]];
+    for(const [nc,nr] of nb){ if(nc<0||nr<0||nc>=COLS||nr>=ROWS) continue; const j=idx(nc,nr);
+      if(grid[j]===OPEN&&!vented[j]){ vented[j]=1; q.push(j); } } }
+  let count=0;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ const i=idx(c,r);
+    const f=(vented[i]&&grid[i]===OPEN&&(r*CELL+16)>G.waterY)?1:0;
+    if(f&&!flooded[i]&&!force) onCellFlooded(c,r);
+    flooded[i]=f; count+=f; }
+  G.floodedCount=count;
+}
+function onCellFlooded(c,r){ const p=center(c,r);
+  for(let k=0;k<5;k++) spawnParticle(p.x+(Math.random()-0.5)*24, p.y+(Math.random()-0.5)*10,
+    (Math.random()-0.5)*40, -30-Math.random()*40, 0.5, '#7db8ff', 3, 300); }
+
+// ---------- game state ----------
+const G={ mode:'title', t:0, seed:20261109, timescale:1, waterY:H+8, rise:0, fps:60,
+  floodedCount:0, score:0, banked:0, lost:0, collected:0, maxDepthRow:1, shake:0,
+  floodTimer:0, warnTimer:0, heartTimer:0, exitNagTimer:0, hudPop:0, msg:'', msgT:0,
+  over:null, started:false, prevWB:1e9 };
+const mole={ x:15.5*CELL, y:1.5*CELL, r:11, face:1, angle:-Math.PI/2, digging:false, blink:0, squash:0 };
+let particles=[], floaters=[], trail=[];   // trail: newest-first [{x,y,d}] d=cumulative px from head
+const input={ x:0, y:0, bot:false, botX:0, botY:0 };
+const keys={};
+let lastAxis='y';
+const stats={ pickupTimes:[], startT:0 };
+
+// ---------- CrazyGames SDK v2 (guarded — no-op outside the portal) ----------
+const CG={ call(name){ try{ const g=window.CrazyGames&&window.CrazyGames.SDK&&window.CrazyGames.SDK.game;
+    if(g&&typeof g[name]==='function') g[name](); }catch(e){} },
+  loadingStop(){ this.call('sdkGameLoadingStop'); },
+  gameplayStart(){ this.call('gameplayStart'); },
+  gameplayStop(){ this.call('gameplayStop'); },
+  happytime(){ this.call('happytime'); } };
+
+function resetRun(seed){
+  if(G.mode==='play') CG.gameplayStop(); // mid-run restart = a break; boot/title calls skip this
+  G.seed=seed; G.waterY=H+8; genLevel(seed);
+  G.mode='title'; G.t=0; G.rise=0; G.score=0; G.banked=0; G.lost=0; G.collected=0;
+  G.maxDepthRow=1; G.shake=0; G.floodTimer=0; G.warnTimer=0; G.heartTimer=0; G.exitNagTimer=2;
+  G.hudPop=0; G.msg=''; G.msgT=0; G.over=null; G.started=false; G.prevWB=1e9;
+  mole.x=15.5*CELL; mole.y=1.5*CELL; mole.face=1; mole.angle=-Math.PI/2; mole.digging=false;
+  particles=[]; floaters=[]; trail=[{x:mole.x,y:mole.y,d:0}];
+  stats.pickupTimes=[]; stats.startT=0;
+  input.x=0; input.y=0;
+}
+function startRun(){ if(G.mode==='title'){ G.mode='play'; G.started=true; stats.startT=0; Audio8.init();
+    CG.gameplayStart();
+    showHint('start','Dig down — find a glowing pocket ↓'); } }
+function say(msg,dur){ G.msg=msg; G.msgT=dur||2.2; }
+
+// ---------- first-run guidance: learn-by-playing hints ----------
+// Each hint fires ONCE per save (localStorage), as a single short line at
+// the top, at the exact moment the mechanic first appears. Play never pauses.
+const HINT_KEY='moleRescue.hints.v1';
+const hintFlags=(()=>{ try{ const h=JSON.parse(localStorage.getItem(HINT_KEY)||'null');
+  if(h&&typeof h==='object') return h; }catch(e){} return {}; })();
+function markHint(k){ hintFlags[k]=1; try{ localStorage.setItem(HINT_KEY, JSON.stringify(hintFlags)); }catch(e){} }
+function showHint(k,msg){ if(hintFlags[k]) return false; markHint(k); say(msg,3.4); return true; }
+
+// ---------- fx ----------
+function spawnParticle(x,y,vx,vy,life,color,size,grav){
+  if(particles.length>420) return;
+  particles.push({x,y,vx,vy,life,maxLife:life,color,size,grav:grav||0}); }
+function dirtBurst(x,y,n){ const cols=['#8a5a33','#6e4525','#a06a3a','#59371d'];
+  for(let i=0;i<n;i++) spawnParticle(x,y,(Math.random()-0.5)*130,-Math.random()*90-10,0.45+Math.random()*0.3,
+    cols[(Math.random()*cols.length)|0],2+Math.random()*3,340); }
+function sparkle(x,y){ for(let i=0;i<10;i++){ const a=Math.random()*6.28, s=30+Math.random()*60;
+  spawnParticle(x,y,Math.cos(a)*s,Math.sin(a)*s-20,0.5,'#ffd76a',2.4,60); } }
+function addFloater(x,y,text,color){ floaters.push({x,y,text,color:color||'#fff',t:0,life:1.15}); }
+
+// ---------- trail (follow-the-leader path) ----------
+function trailPush(x,y){
+  const head=trail[0]; const dx=x-head.x, dy=y-head.y; const dist=Math.hypot(dx,dy);
+  if(dist>=3){ trail.unshift({x,y,d:head.d+dist});
+    const need=TRAIL_GAP*(babies.filter(b=>b.state==='following').length+1)+140;
+    while(trail.length>2 && trail[trail.length-1].d < trail[0].d-need) trail.pop(); } }
+function trailPoint(distBehind){
+  const targetD=trail[0].d-distBehind;
+  for(let i=0;i<trail.length;i++){ if(trail[i].d<=targetD){
+    if(i===0) return {x:trail[0].x,y:trail[0].y};
+    const a=trail[i-1], b=trail[i]; const span=a.d-b.d||1; const k=(a.d-targetD)/span;
+    return {x:lerp(a.x,b.x,k), y:lerp(a.y,b.y,k)}; } }
+  const last=trail[trail.length-1]; return {x:last.x,y:last.y}; }
+
+// ---------- flood / danger ----------
+function isFloodedAt(x,y){ const {c,r}=cellAt(x,y); return flooded[idx(c,r)]===1; }
+function waterDistanceBelow(){ // px from mole down to nearest flooded cell in nearby columns
+  let best=1e9; const mc=cellAt(mole.x,mole.y);
+  for(let c=Math.max(0,mc.c-3);c<=Math.min(COLS-1,mc.c+3);c++)
+    for(let r=mc.r;r<ROWS;r++){ if(flooded[idx(c,r)]){ best=Math.min(best, r*CELL-mole.y); break; } }
+  return best; }
+function beaconTarget(){ // what the guide beacon points at right now (null = hidden)
+  if(G.mode!=='play') return null;
+  if(babies.some(b=>b.state==='following')) return { x:(EXIT.x0+EXIT.x1)/2, y:44, kind:'exit' };
+  let best=null, bd=Infinity;
+  for(const b of babies){ if(b.state!=='waiting') continue;
+    const d=(b.x-mole.x)*(b.x-mole.x)+(b.y-mole.y)*(b.y-mole.y);
+    if(d<bd){ bd=d; best=b; } }
+  return best?{ x:best.x, y:best.y, kind:'baby' }:null;
+}
+function floodMissedBy(){ const rate=Math.max(G.rise,RISE0); return Math.max(0, Math.floor((G.waterY-SURF_Y)/rate)); }
+
+// ---------- run end ----------
+function rockPush(x,y){ // if a circle (mole radius) at x,y penetrates a rock cell, return the push-out vector
+  const c0=cellAt(x-mole.r,y-mole.r), c1=cellAt(x+mole.r,y+mole.r);
+  for(let r=c0.r;r<=c1.r;r++) for(let c=c0.c;c<=c1.c;c++){
+    if(grid[idx(c,r)]!==ROCK) continue;
+    const cx0=c*CELL, cy0=r*CELL;
+    const qx=clamp(x,cx0,cx0+CELL), qy=clamp(y,cy0,cy0+CELL);
+    const dx=x-qx, dy=y-qy, d2=dx*dx+dy*dy;
+    if(d2>=mole.r*mole.r) continue;
+    if(d2<0.01){ const exits=[{d:x-cx0,px:-1,py:0},{d:cx0+CELL-x,px:1,py:0},{d:y-cy0,px:0,py:-1},{d:cy0+CELL-y,px:0,py:1}];
+      exits.sort((a,b)=>a.d-b.d); const e=exits[0]; return {x:e.px*(e.d+mole.r), y:e.py*(e.d+mole.r)}; }
+    const d=Math.sqrt(d2); return {x:dx/d*(mole.r-d), y:dy/d*(mole.r-d)};
+  }
+  return null;
+}
+function endRun(kind){
+  if(G.mode!=='play') return;
+  G.mode='over';
+  CG.gameplayStop(); if(kind==='win') CG.happytime();
+  const following=babies.filter(b=>b.state==='following');
+  let missedBy=null;
+  if(kind==='win'){
+    const gain=following.reduce((s,b)=>s+b.value,0);
+    missedBy=floodMissedBy();
+    const timeBonus=Math.min(300, missedBy*5);
+    G.score=gain+timeBonus; G.banked=following.length;
+    following.forEach(b=>b.state='banked');
+    totals.totalSaved+=following.length;
+    Audio8.win(); sparkle(mole.x,mole.y); addFloater(mole.x,mole.y-26,'+'+G.score,'#ffd76a');
+  } else { G.score=0; if(kind==='dead') Audio8.lose(); else Audio8.sad(); }
+  totals.runs++;
+  const isBest=G.score>totals.best; if(isBest) totals.best=G.score;
+  saveTotals();
+  G.over={ kind, missedBy, isBest,
+    saved: babies.filter(b=>b.state==='banked').length,
+    total: babies.length,
+    maxDepthM: Math.max(0,G.maxDepthRow-1),
+    survived: Math.floor(G.t) };
+}
+
+// ---------- update ----------
+function update(dt){
+  // particles/floaters always animate
+  for(const p of particles){ p.life-=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=(p.grav||0)*dt; }
+  particles=particles.filter(p=>p.life>0);
+  for(const f of floaters){ f.t+=dt; f.y-=34*dt; }
+  floaters=floaters.filter(f=>f.t<f.life);
+  if(G.msgT>0) G.msgT-=dt;
+  if(G.hudPop>0) G.hudPop-=dt*3;
+  if(G.shake>0) G.shake=Math.max(0,G.shake-dt*26);
+  mole.blink-=dt; if(mole.blink<-2.6) mole.blink=0.14;
+  if(G.mode!=='play') return;
+  G.t+=dt;
+
+  // --- input direction (dominant axis) ---
+  let ix=0, iy=0;
+  if(input.bot){ ix=input.botX; iy=input.botY; }
+  else { ix=(keys['arrowright']||keys['d']?1:0)-(keys['arrowleft']||keys['a']?1:0);
+         iy=(keys['arrowdown']||keys['s']?1:0)-(keys['arrowup']||keys['w']?1:0); }
+  if(ix!==0&&iy!==0){ if(lastAxis==='x') iy=0; else ix=0; }
+  if(ix!==0){ mole.face=ix; }
+
+  // --- digging / movement ---
+  mole.digging=false;
+  if(ix!==0||iy!==0){
+    const fx=mole.x+ix*(mole.r+5), fy=mole.y+iy*(mole.r+5);
+    const fc=cellAt(fx,fy), fi=idx(fc.c,fc.r), ftype=grid[fi];
+    let speed=SPEED_OPEN;
+    if(ftype===ROCK){ speed=0; Audio8.bump(); mole.squash=0.12; }
+    else if(ftype===DIRT){
+      mole.digging=true;
+      digP[fi]+=dt/DIG_TIME;
+      speed=SPEED_DIG_MIN+SPEED_DIG_SPAN*Math.min(1,digP[fi]);
+      if(Math.random()<dt*22) dirtBurst(fx,fy,1);
+      Audio8.crunch();
+      if(digP[fi]>=1){ grid[fi]=OPEN; digP[fi]=0; dirtBurst(fc.c*CELL+16,fc.r*CELL+16,11);
+        G.shake=Math.max(G.shake,1.6); }
+    }
+    { // depenetrate from any rock contact first (corner scrapes must slide, never wedge)
+      const push=rockPush(mole.x,mole.y);
+      if(push){ mole.x=clamp(mole.x+push.x,mole.r,W-mole.r); mole.y=clamp(mole.y+push.y,mole.r,H-mole.r); }
+    }
+    { // lane assist: while travelling along an axis, ease toward the lane centre —
+      // a mole scraping a tunnel wall slides back to centre instead of wedging on a corner
+      const mc=cellAt(mole.x,mole.y);
+      if(iy!==0){ const dxl=mc.c*CELL+16-mole.x;
+        if(Math.abs(dxl)>1){ const tx=mole.x+clamp(dxl,-50*dt,50*dt); if(!rockPush(tx,mole.y)) mole.x=tx; } }
+      if(ix!==0){ const dyl=mc.r*CELL+16-mole.y;
+        if(Math.abs(dyl)>1){ const ty=mole.y+clamp(dyl,-50*dt,50*dt); if(!rockPush(mole.x,ty)) mole.y=ty; } }
+    }
+    if(speed>0){
+      if(ix!==0){ const nx=mole.x+ix*speed*dt;
+        if(!rockPush(nx,mole.y)) mole.x=nx;
+        else { const tx=mole.x+ix*speed*dt*0.4; if(!rockPush(tx,mole.y)) mole.x=tx; } }
+      if(iy!==0){ const ny=mole.y+iy*speed*dt;
+        if(!rockPush(mole.x,ny)) mole.y=ny;
+        else { const ty=mole.y+iy*speed*dt*0.4; if(!rockPush(mole.x,ty)) mole.y=ty; } }
+      mole.x=clamp(mole.x,mole.r,W-mole.r); mole.y=clamp(mole.y,mole.r,H-mole.r);
+      const targetAngle=Math.atan2(iy,ix);
+      let da=targetAngle-mole.angle; while(da>Math.PI)da-=2*Math.PI; while(da<-Math.PI)da+=2*Math.PI;
+      mole.angle+=da*Math.min(1,dt*14);
+    }
+    trailPush(mole.x,mole.y);
+  }
+  // safety: mole centre should never sit inside solid dirt
+  { const mc=cellAt(mole.x,mole.y), mi=idx(mc.c,mc.r);
+    if(grid[mi]===DIRT){ grid[mi]=OPEN; dirtBurst(mole.x,mole.y,8); } }
+  const mrow=cellAt(mole.x,mole.y).r; if(mrow>G.maxDepthRow) G.maxDepthRow=mrow;
+
+  // guidance: first time the mole draws level with a pocket it hasn't reached — nudge sideways
+  if(G.collected===0){ const mc=cellAt(mole.x,mole.y);
+    for(const b of babies){ if(b.state!=='waiting') continue;
+      const gap=Math.abs(b.col-mc.c);
+      if(Math.abs(b.row-mc.r)<=1&&gap>=2&&gap<=5){ showHint('sideways','Dig sideways into the glow!'); break; } } }
+
+  // --- water ---
+  if(G.t>GRACE){ G.rise=Math.min(RISE_CAP, RISE0+RISE_ACCEL*Math.max(0,G.t-GRACE)+RISE_PER_BABY*G.collected);
+    G.waterY-=G.rise*dt; }
+  G.floodTimer-=dt; if(G.floodTimer<=0){ G.floodTimer=0.12; computeFlood(false); }
+
+  // --- babies ---
+  const following=[];
+  for(const b of babies){
+    if(b.state==='waiting'){
+      b.y=b.homeY+Math.sin(G.t*2.2+b.phase)*2.5; b.x=b.homeX;
+      if(Math.hypot(b.x-mole.x,b.y-mole.y)<22){ b.state='following'; G.collected++;
+        stats.pickupTimes.push(G.t); Audio8.chirp(following.length+G.banked); Audio8.pop();
+        sparkle(b.x,b.y); addFloater(b.x,b.y-20,'+1','#ffd76a'); G.hudPop=1;
+        if(!showHint('pickup','Got one! Take it back UP to the flag ↑'))
+          say(following.length+G.banked+1>=babies.length?'That is all of them — UP! UP!':'A baby is following you!'); }
+      else if(isFloodedAt(b.x,b.y)){ b.state='lost'; G.lost++; Audio8.splash(); Audio8.sad();
+        addFloater(b.x,b.y-16,'lost…','#7db8ff'); say('A pocket flooded — a baby was lost!'); }
+    }
+    if(b.state==='following') following.push(b);
+  }
+  following.forEach((b,i)=>{ const tp=trailPoint(TRAIL_GAP*(i+1));
+    b.x+=(tp.x-b.x)*Math.min(1,dt*16); b.y+=(tp.y-b.y)*Math.min(1,dt*16);
+    if(isFloodedAt(b.x,b.y)){ b.state='lost'; G.lost++; Audio8.splash(); Audio8.sad();
+      for(let k=0;k<12;k++) spawnParticle(b.x,b.y,(Math.random()-0.5)*90,-Math.random()*70,0.6,'#7db8ff',3,300);
+      addFloater(b.x,b.y-16,'baby lost!','#7db8ff'); say('The flood took a baby from the line!'); } });
+  const anyLeft=babies.some(b=>b.state==='waiting'||b.state==='following');
+
+  // --- exit / death ---
+  const inExit = mole.x>EXIT.x0&&mole.x<EXIT.x1&&mole.y<EXIT.y1;
+  if(inExit){
+    if(following.length>0){ G.exitDwell=(G.exitDwell||0)+dt;
+      if(G.exitDwell>=0.6) endRun('win');
+      else if(G.exitDwell<dt*1.5) addFloater(mole.x,mole.y-24,'Climbing out…','#ffd76a'); }
+    else { G.exitNagTimer-=dt; if(G.exitNagTimer<=0){ G.exitNagTimer=1.6;
+      addFloater(mole.x,mole.y-24,'Save a baby first!','#fff'); } }
+  } else G.exitDwell=0;
+  if(G.mode==='play'&&isFloodedAt(mole.x,mole.y)){ Audio8.splash();
+    for(let k=0;k<22;k++) spawnParticle(mole.x,mole.y,(Math.random()-0.5)*150,-Math.random()*110,0.8,'#7db8ff',3.4,320);
+    endRun('dead'); }
+  if(G.mode==='play'&&!anyLeft&&G.collected>0) endRun('lost');
+
+  // --- danger warning + ambience ---
+  const wDist=waterDistanceBelow();
+  if(G.prevWB>=9000&&wDist<9000) showHint('flood','The flood is in your tunnels — hurry!');
+  G.prevWB=wDist;
+  const waterFrac=clamp((H-Math.max(G.waterY,0))/H,0,1);
+  Audio8.setWater(0.012+waterFrac*0.05+(wDist<130?0.05:0));
+  if(wDist<115&&G.mode==='play'){ G.heartTimer-=dt;
+    if(G.heartTimer<=0){ G.heartTimer=0.85; Audio8.heartbeat(); }
+    G.warnTimer-=dt; if(G.warnTimer<=0){ G.warnTimer=3.4; say('The water is right below you!'); } }
+}
+
+// ---------- rendering ----------
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+function makeTile(fn){ const c=document.createElement('canvas'); c.width=c.height=CELL; fn(c.getContext('2d')); return c; }
+const tileRng=mulberry32(1234);
+const dirtTiles=[0,1,2,3].map(()=>makeTile(g=>{ g.fillStyle='#7a4e2a'; g.fillRect(0,0,32,32);
+  for(let i=0;i<26;i++){ g.fillStyle=['#6b4223','#8a5a33','#5d3a1e','#96683c'][(tileRng()*4)|0];
+    g.fillRect(tileRng()*30,tileRng()*30,2,2); }
+  g.fillStyle='#a3763f'; g.fillRect(tileRng()*24,tileRng()*24,3,2); }));
+const rockTile=makeTile(g=>{ g.fillStyle='#7a4e2a'; g.fillRect(0,0,32,32);
+  g.fillStyle='#5f5952'; g.beginPath(); g.ellipse(16,17,13,11,0,0,6.29); g.fill();
+  g.fillStyle='#847d73'; g.beginPath(); g.ellipse(13,12,8,5,-0.4,0,6.29); g.fill();
+  g.fillStyle='#4c4741'; g.fillRect(8,24,16,2); });
+const hash=(c,r)=>((c*73856093)^(r*19349663))&3;
+const clouds=[[120,14,46],[330,8,60],[610,16,52],[830,10,64],[480,22,36]];
+const bowColors=['#ff5d8f','#ffd166','#6ee7a0','#7db8ff','#c792ff'];
+
+function drawBaby(x,y,s,bowIdx,happy){
+  ctx.save(); ctx.translate(x,y); ctx.scale(s,s);
+  ctx.fillStyle='#7a4e2a'; ctx.beginPath(); ctx.ellipse(-7,-6,3.4,2.6,-0.5,0,6.29); ctx.ellipse(7,-6,3.4,2.6,0.5,0,6.29); ctx.fill();
+  ctx.fillStyle='#e0aa6e'; ctx.beginPath(); ctx.ellipse(0,0,10.5,9,0,0,6.29); ctx.fill();
+  ctx.fillStyle='#f0c08a'; ctx.beginPath(); ctx.ellipse(0,3.4,6.4,4.4,0,0,6.29); ctx.fill();
+  ctx.fillStyle='#b5546a'; ctx.beginPath(); ctx.ellipse(0,1.6,2.1,1.6,0,0,6.29); ctx.fill();
+  ctx.fillStyle='#1c1410';
+  if(happy){ ctx.lineWidth=1.4; ctx.strokeStyle='#1c1410';
+    ctx.beginPath(); ctx.arc(-3.6,-1.8,1.7,3.4,6.0); ctx.stroke();
+    ctx.beginPath(); ctx.arc(3.6,-1.8,1.7,3.4,6.0); ctx.stroke(); }
+  else { ctx.beginPath(); ctx.arc(-3.6,-1.6,1.5,0,6.29); ctx.arc(3.6,-1.6,1.5,0,6.29); ctx.fill(); }
+  if(bowIdx>=0){ ctx.fillStyle=bowColors[bowIdx%bowColors.length];
+    ctx.beginPath(); ctx.moveTo(0,-8.6); ctx.lineTo(-4.4,-11); ctx.lineTo(-4.4,-6.2); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0,-8.6); ctx.lineTo(4.4,-11); ctx.lineTo(4.4,-6.2); ctx.closePath(); ctx.fill(); }
+  ctx.restore();
+}
+function drawMole(){
+  ctx.save(); ctx.translate(mole.x,mole.y); ctx.rotate(mole.angle);
+  const sq=1+(mole.squash>0?0.16:0); ctx.scale(sq,1/Math.sqrt(sq));
+  ctx.strokeStyle='#b98a5a'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(-13,0);
+  ctx.quadraticCurveTo(-19,Math.sin(G.t*3.1)*3.4,-22,Math.sin(G.t*3.1+0.6)*4); ctx.stroke();
+  ctx.fillStyle='#8a5a33'; ctx.beginPath(); ctx.ellipse(0,0,15,11.5,0,0,6.29); ctx.fill();
+  ctx.fillStyle='#a9763f'; ctx.beginPath(); ctx.ellipse(1,3.4,10,6.4,0,0,6.29); ctx.fill();
+  ctx.fillStyle='#6e4525'; ctx.beginPath(); ctx.arc(3,-8,3.4,0,6.29); ctx.fill();
+  ctx.fillStyle='#e8a2b4'; ctx.beginPath(); ctx.arc(3,-8,1.7,0,6.29); ctx.fill();
+  ctx.fillStyle='#96683c'; ctx.beginPath(); ctx.arc(9.5,0,8.6,0,6.29); ctx.fill();
+  ctx.fillStyle='#d99a7c'; ctx.beginPath(); ctx.ellipse(16.5,0,5.2,3.8,0,0,6.29); ctx.fill();
+  ctx.fillStyle='#b5546a'; ctx.beginPath(); ctx.arc(20.6,0,2.3,0,6.29); ctx.fill();
+  if(mole.blink>0){ ctx.strokeStyle='#1c1410'; ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.moveTo(9.4,-4.4); ctx.lineTo(13.4,-4.4); ctx.stroke(); }
+  else { ctx.fillStyle='#1c1410'; ctx.beginPath(); ctx.arc(11.4,-3.6,1.8,0,6.29); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(12,-4.2,0.7,0,6.29); ctx.fill(); }
+  if(mole.digging){ ctx.strokeStyle='#e8dcc8'; ctx.lineWidth=2;
+    for(const s of [-1,1]){ const a=Math.sin(G.t*34+s)*3;
+      ctx.beginPath(); ctx.moveTo(15,s*7); ctx.lineTo(20,s*7+a); ctx.stroke(); } }
+  ctx.restore();
+  if(mole.squash>0) mole.squash-=0.016;
+}
+function text(str,x,y,size,color,align,bold){
+  ctx.font=(bold===false?'':'bold ')+size+'px "Trebuchet MS",sans-serif';
+  ctx.textAlign=align||'left'; ctx.lineWidth=Math.max(2,size/6); ctx.strokeStyle='rgba(20,10,4,0.85)';
+  ctx.strokeText(str,x,y); ctx.fillStyle=color; ctx.fillText(str,x,y); }
+
+function render(){
+  ctx.save();
+  if(G.shake>0) ctx.translate((Math.random()-0.5)*G.shake,(Math.random()-0.5)*G.shake);
+  // sky + grass
+  const sky=ctx.createLinearGradient(0,0,0,64); sky.addColorStop(0,'#8fd4ff'); sky.addColorStop(1,'#d8f4ff');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,64);
+  ctx.fillStyle='rgba(255,255,255,0.85)';
+  for(const [cx,cy,s] of clouds){ ctx.beginPath(); ctx.ellipse(cx,cy,s,s*0.32,0,0,6.29); ctx.fill(); }
+  ctx.fillStyle='#57a639'; ctx.fillRect(0,32,W,32);
+  ctx.fillStyle='#4c9433'; for(let x=4;x<W;x+=14) ctx.fillRect(x,34+((x*7)%9),2,7);
+  ctx.fillStyle='#6f4525'; ctx.fillRect(0,62,W,3);
+  // exit burrow
+  const ex=(EXIT.x0+EXIT.x1)/2;
+  ctx.fillStyle='#2a1a0c'; ctx.beginPath(); ctx.ellipse(ex,60,32,9,0,0,6.29); ctx.fill();
+  ctx.fillStyle='#120a04'; ctx.beginPath(); ctx.ellipse(ex,60,22,6,0,0,6.29); ctx.fill();
+  ctx.strokeStyle='#7a4e2a'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(ex+40,58); ctx.lineTo(ex+40,22); ctx.stroke();
+  const fw=Math.sin(G.t*3.2)*2.5; // flag waves so the eye catches it
+  ctx.fillStyle='#e84a5f'; ctx.beginPath(); ctx.moveTo(ex+40,22); ctx.lineTo(ex+58+fw,27); ctx.lineTo(ex+40,32); ctx.closePath(); ctx.fill();
+  const hasFollowers=babies.some(b=>b.state==='following');
+  if(G.mode==='play'){ const strong=hasFollowers; // exit always pulses softly; urgently when carrying
+    ctx.strokeStyle='rgba(255,215,106,'+((strong?0.5:0.22)+(strong?0.4:0.18)*Math.sin(G.t*(strong?5:2.6)))+')';
+    ctx.lineWidth=strong?2.5:2; ctx.beginPath(); ctx.ellipse(ex,60,38,12,0,0,6.29); ctx.stroke(); }
+  // underground cells
+  for(let r=2;r<ROWS;r++) for(let c=0;c<COLS;c++){ const i=idx(c,r), t=grid[i], x=c*CELL, y=r*CELL;
+    if(t===DIRT) ctx.drawImage(dirtTiles[hash(c,r)],x,y);
+    else if(t===ROCK) ctx.drawImage(rockTile,x,y);
+    else { ctx.fillStyle=vented[i]?'#43301d':'#59422a'; ctx.fillRect(x,y,CELL,CELL);
+      if(r>2&&grid[idx(c,r-1)]===DIRT){ ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fillRect(x,y,CELL,5); }
+      if(!vented[i]){ ctx.fillStyle='rgba(255,240,200,'+(0.05+0.03*Math.sin(G.t*2+c))+')'; ctx.fillRect(x,y,CELL,CELL); } } }
+  // groundwater table + flood
+  if(G.waterY<H){
+    ctx.fillStyle='rgba(50,110,220,0.10)'; ctx.fillRect(0,Math.max(G.waterY,SURF_Y),W,H-G.waterY);
+    ctx.strokeStyle='rgba(130,195,255,0.8)'; ctx.lineWidth=2; ctx.setLineDash([9,7]);
+    ctx.beginPath(); ctx.moveTo(0,G.waterY); ctx.lineTo(W,G.waterY); ctx.stroke(); ctx.setLineDash([]);
+    for(let r=2;r<ROWS;r++) for(let c=0;c<COLS;c++){ const i=idx(c,r); if(!flooded[i]) continue;
+      const x=c*CELL, y=r*CELL; ctx.fillStyle='rgba(35,115,235,0.52)'; ctx.fillRect(x,y,CELL,CELL);
+      if(!flooded[idx(c,r-1)]){ ctx.strokeStyle='rgba(210,240,255,0.95)'; ctx.lineWidth=2; ctx.beginPath();
+        for(let px=0;px<=CELL;px+=4){ const wy=y+3+Math.sin(G.t*6+px*0.4+c)*1.6; px===0?ctx.moveTo(x+px,wy):ctx.lineTo(x+px,wy); } ctx.stroke(); } }
+    const grd=ctx.createLinearGradient(0,G.waterY,0,H);
+    grd.addColorStop(0,'rgba(30,90,200,0)'); grd.addColorStop(1,'rgba(30,90,200,0.16)');
+    ctx.fillStyle=grd; ctx.fillRect(0,Math.max(G.waterY,0),W,H-Math.max(G.waterY,0));
+  }
+  // babies
+  for(const b of babies){ if(b.state==='banked'||b.state==='lost') continue;
+    if(b.state==='waiting'){ const pulse=0.5+0.5*Math.sin(G.t*3+b.phase); // breathing glow — reads as a GOAL
+      const gr=ctx.createRadialGradient(b.x,b.y,4,b.x,b.y,56);
+      gr.addColorStop(0,'rgba(255,215,106,'+(0.30+0.15*pulse)+')'); gr.addColorStop(1,'rgba(255,215,106,0)');
+      ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(b.x,b.y,56,0,6.29); ctx.fill();
+      ctx.strokeStyle='rgba(255,215,106,'+(0.55+0.4*pulse)+')';
+      ctx.lineWidth=3; ctx.beginPath(); ctx.arc(b.x,b.y,17+2.5*Math.sin(G.t*3+b.phase),0,6.29); ctx.stroke(); }
+    drawBaby(b.x,b.y,b.state==='following'?0.74:0.85,b.hue,b.state==='following'); }
+  drawMole();
+  // guide beacon — a soft pulsing arrow beside the mole, pointing at the current goal
+  { const bt=beaconTarget();
+    if(bt){ const dx=bt.x-mole.x, dy=bt.y-mole.y, dist=Math.hypot(dx,dy);
+      if(dist>46){ const a=Math.atan2(dy,dx);
+        ctx.save(); ctx.translate(mole.x+Math.cos(a)*32, mole.y+Math.sin(a)*32); ctx.rotate(a);
+        ctx.globalAlpha=0.55+0.3*Math.sin(G.t*4.5);
+        ctx.fillStyle=bt.kind==='exit'?'#8dff9a':'#ffd76a';
+        ctx.beginPath(); ctx.moveTo(9,0); ctx.lineTo(-5,-6.5); ctx.lineTo(-1.5,0); ctx.lineTo(-5,6.5); ctx.closePath(); ctx.fill();
+        ctx.restore(); ctx.globalAlpha=1; } } }
+  // particles + floaters
+  for(const p of particles){ ctx.globalAlpha=clamp(p.life/p.maxLife,0,1); ctx.fillStyle=p.color;
+    ctx.fillRect(p.x-p.size/2,p.y-p.size/2,p.size,p.size); }
+  ctx.globalAlpha=1;
+  for(const f of floaters){ ctx.globalAlpha=1-f.t/f.life; text(f.text,f.x,f.y,16,f.color,'center'); }
+  ctx.globalAlpha=1;
+  ctx.restore();
+  renderHUD();
+  if(G.mode==='title') renderTitle();
+  if(G.mode==='over') renderOver();
+}
+function renderHUD(){
+  // babies counter — big, always on screen, pops on rescue
+  const rescued=G.banked+babies.filter(b=>b.state==='following').length;
+  babies.forEach((b,i)=>{ const x=26+i*27, y=24;
+    ctx.beginPath(); ctx.arc(x,y,10,0,6.29);
+    if(b.state==='banked'){ ctx.fillStyle='#ffd76a'; ctx.fill(); }
+    else if(b.state==='following'){ ctx.fillStyle='#ff9ec4'; ctx.fill(); }
+    else if(b.state==='lost'){ ctx.fillStyle='rgba(40,40,50,0.7)'; ctx.fill(); }
+    else { ctx.fillStyle='rgba(255,255,255,0.22)'; ctx.fill(); }
+    ctx.lineWidth=2; ctx.strokeStyle='rgba(20,10,4,0.8)'; ctx.stroke();
+    if(b.state==='lost'){ ctx.strokeStyle='#ff6b6b'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(x-5,y-5); ctx.lineTo(x+5,y+5); ctx.moveTo(x+5,y-5); ctx.lineTo(x-5,y+5); ctx.stroke(); } });
+  const pop=1+0.45*Math.max(0,G.hudPop);
+  ctx.save(); ctx.translate(178,32); ctx.scale(pop,pop);
+  text(rescued+' / '+babies.length,0,0,27,'#ffd76a','left'); ctx.restore();
+  text('BABIES',150,52,11,'#ffe9b0','left');
+  const mm=((G.t/60)|0), ss=(''+((G.t|0)%60)).padStart(2,'0');
+  text('TIME '+mm+':'+ss+'   DEPTH '+Math.max(0,cellAt(mole.x,mole.y).r-1)+'m',16,86,14,'#fff','left');
+  text('SCORE '+G.score,W-16,30,20,'#ffd76a','right');
+  text('BEST '+Math.max(totals.best,G.score),W-16,52,13,'#d8c9a8','right');
+  if(G.mode==='play'&&G.t<GRACE) text('The flood comes in '+Math.ceil(GRACE-G.t)+'…',W/2,86,16,'#7db8ff','center');
+  else if(G.mode==='play'&&G.t<GRACE+3) text('THE FLOOD IS RISING!',W/2,86,16,'#7db8ff','center');
+  if(G.msgT>0&&G.mode==='play'){ ctx.globalAlpha=clamp(G.msgT,0,1); text(G.msg,W/2,112,17,'#fff','center'); ctx.globalAlpha=1; }
+  // flood gauge (right edge)
+  const gx=W-15, gy0=96, gy1=H-16, gh=gy1-gy0;
+  ctx.fillStyle='rgba(10,16,28,0.55)'; ctx.fillRect(gx-5,gy0,10,gh);
+  const wy=gy0+clamp((clamp(G.waterY,SURF_Y,H)-SURF_Y)/(H-SURF_Y),0,1)*gh;
+  ctx.fillStyle='rgba(60,140,255,0.85)'; ctx.fillRect(gx-5,wy,10,gy1-wy);
+  const my=gy0+clamp((mole.y-SURF_Y)/(H-SURF_Y),0,1)*gh;
+  ctx.fillStyle='#ffd76a'; ctx.beginPath(); ctx.moveTo(gx-11,my); ctx.lineTo(gx-5,my-4.5); ctx.lineTo(gx-5,my+4.5); ctx.closePath(); ctx.fill();
+  text('FLOOD',gx+3,gy0-8,10,'#7db8ff','center');
+  // danger vignette
+  if(G.mode==='play'&&waterDistanceBelow()<115){
+    const a=0.10+0.07*Math.sin(G.t*10);
+    const vg=ctx.createRadialGradient(W/2,H/2,H*0.36,W/2,H/2,H*0.75);
+    vg.addColorStop(0,'rgba(255,50,30,0)'); vg.addColorStop(1,'rgba(255,50,30,'+a+')');
+    ctx.fillStyle=vg; ctx.fillRect(0,0,W,H); }
+}
+function renderTitle(){
+  ctx.fillStyle='rgba(22,13,5,0.55)'; ctx.fillRect(0,0,W,H);
+  text('MOLE RESCUE',W/2,208,58,'#ffd76a','center');
+  text('Dig ↓ save the babies — race the flood ↑',W/2,252,23,'#ffffff','center');
+  text('You dig. Babies follow you in a line. Lead them back UP to the flag.',W/2,284,16,'#ffe9b0','center');
+  text('Deeper babies = more points. The water floods your own tunnels.',W/2,308,16,'#ffe9b0','center');
+  text('WASD · Arrow keys · Drag',W/2,352,16,'#d8c9a8','center');
+  if(totals.best>0||totals.totalSaved>0)
+    text('Best score: '+totals.best+'   ·   Babies saved all-time: '+totals.totalSaved,W/2,384,16,'#ffd76a','center');
+  ctx.globalAlpha=0.65+0.35*Math.sin(performance.now()/280);
+  text('— press any key or tap to dig —',W/2,432,19,'#ffffff','center'); ctx.globalAlpha=1;
+}
+function renderOver(){
+  const o=G.over; if(!o) return;
+  ctx.fillStyle='rgba(16,10,4,0.62)'; ctx.fillRect(0,0,W,H);
+  const cx=W/2;
+  if(o.kind==='win'){ text('YOU MADE IT OUT!',cx,196,42,'#8dff9a','center');
+    text('Babies saved: '+o.saved+' / '+o.total,cx,246,24,'#fff','center');
+    if(o.missedBy!==null) text('The flood missed you by '+o.missedBy+'s',cx,280,19,'#7db8ff','center'); }
+  else if(o.kind==='dead'){ text('THE FLOOD GOT YOU',cx,196,42,'#ff8a7a','center');
+    text('Babies saved: '+o.saved+' / '+o.total,cx,246,24,'#fff','center');
+    text('You survived '+o.survived+'s · deepest dig '+o.maxDepthM+'m',cx,280,19,'#d8c9a8','center');
+    const left=babies.filter(b=>b.state==='waiting').length, inline=babies.filter(b=>b.state==='lost').length;
+    text(left+' still waiting below · '+inline+' lost to the water',cx,308,16,'#7db8ff','center'); }
+  else { text('NO BABIES LEFT…',cx,196,42,'#ff8a7a','center');
+    text('The flood took them all. Dig faster next time.',cx,246,20,'#fff','center'); }
+  text('SCORE '+G.score+(o.isBest&&G.score>0?'  — NEW BEST!':''),cx,352,30,'#ffd76a','center');
+  text('Best: '+totals.best+'   ·   Babies saved all-time: '+totals.totalSaved,cx,384,16,'#d8c9a8','center');
+  ctx.globalAlpha=0.65+0.35*Math.sin(performance.now()/280);
+  text('R / tap — dig again (same burrow)      N — new burrow',cx,432,18,'#ffffff','center'); ctx.globalAlpha=1;
+}
+
+// ---------- input ----------
+addEventListener('keydown',e=>{
+  const k=e.key.toLowerCase();
+  if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+  Audio8.init();
+  if(G.mode==='over'){ if(k==='r'||k===' '||k==='enter'){ resetRun(G.seed); startRun(); }
+    else if(k==='n'){ resetRun((Math.random()*1e9)|0); startRun(); } return; }
+  if(G.mode==='play'&&k==='r'){ resetRun(G.seed); startRun(); return; }
+  if(G.mode==='play'&&k==='n'){ resetRun((Math.random()*1e9)|0); startRun(); return; }
+  if(G.mode==='title') startRun();
+  keys[k]=true;
+  if(k==='arrowleft'||k==='a'||k==='arrowright'||k==='d') lastAxis='x';
+  if(k==='arrowup'||k==='w'||k==='arrowdown'||k==='s') lastAxis='y';
+});
+addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+let touchOrigin=null, touchVec=null;
+function canvasPos(e){ const r=cv.getBoundingClientRect();
+  return { x:(e.clientX-r.left)*W/r.width, y:(e.clientY-r.top)*H/r.height }; }
+cv.addEventListener('pointerdown',e=>{ Audio8.init();
+  if(G.mode==='title'){ startRun(); return; }
+  if(G.mode==='over'){ resetRun(G.seed); startRun(); return; }
+  touchOrigin=canvasPos(e); touchVec=null; });
+cv.addEventListener('pointermove',e=>{ if(!touchOrigin) return; const p=canvasPos(e);
+  const dx=p.x-touchOrigin.x, dy=p.y-touchOrigin.y;
+  if(Math.hypot(dx,dy)>16) touchVec={x:dx,y:dy}; });
+addEventListener('pointerup',()=>{ touchOrigin=null; touchVec=null; });
+// touch joystick feeds the same dominant-axis input
+const _update=update;
+update=function(dt){ if(touchVec&&G.mode==='play'){ const prev={...input};
+    input.bot=true; input.botX=touchVec.x; input.botY=touchVec.y; _update(dt);
+    input.bot=prev.bot; input.botX=prev.botX; input.botY=prev.botY; }
+  else _update(dt); };
+
+// ---------- main loop ----------
+let lastNow=performance.now();
+function frame(now){ const dtReal=Math.min(0.05,(now-lastNow)/1000||0.016); lastNow=now;
+  if(dtReal>0) G.fps=lerp(G.fps,1/Math.max(dtReal,0.001),0.05);
+  update(dtReal*G.timescale); render(); requestAnimationFrame(frame); }
+
+// ---------- debug / playtest API ----------
+window.__MR={
+  state(){ const f=babies.filter(b=>b.state==='following').length, w=babies.filter(b=>b.state==='waiting').length;
+    return { mode:G.mode, t:Math.round(G.t*100)/100, seed:G.seed, score:G.score, waterY:Math.round(G.waterY),
+      rise:Math.round(G.rise*100)/100, mole:{x:Math.round(mole.x),y:Math.round(mole.y),row:cellAt(mole.x,mole.y).r},
+      following:f, waiting:w, banked:G.banked, lost:G.lost, collected:G.collected,
+      maxDepthRow:G.maxDepthRow, fps:Math.round(G.fps*10)/10, floodedCount:G.floodedCount,
+      waterBelow:Math.round(waterDistanceBelow()), pickups:stats.pickupTimes.map(v=>Math.round(v*10)/10),
+      over:G.over?{...G.over}:null, totals:{...totals},
+      msg:G.msgT>0?G.msg:'', hints:{...hintFlags},
+      beacon:(()=>{ const bt=beaconTarget(); return bt?{ tx:bt.x, ty:bt.y, kind:bt.kind }:null; })(),
+      babies:babies.map(b=>({id:b.id,col:b.col,row:b.row,x:Math.round(b.x),y:Math.round(b.y),state:b.state,value:b.value})) }; },
+  grid(){ return { cols:COLS, rows:ROWS, cell:CELL, types:Array.from(grid), flooded:Array.from(flooded),
+    waterY:G.waterY, exit:{x0:EXIT.x0,x1:EXIT.x1,y1:EXIT.y1} }; },
+  setMove(x,y){ input.bot=true; input.botX=x; input.botY=y; },
+  clearMove(){ input.bot=false; input.botX=0; input.botY=0; },
+  start(){ startRun(); },
+  restart(seed){ resetRun(seed===undefined?G.seed:seed); startRun(); },
+  setTimescale(k){ G.timescale=k; },
+  resetHints(){ for(const k in hintFlags) delete hintFlags[k]; try{ localStorage.removeItem(HINT_KEY); }catch(e){} },
+  newSeed(){ resetRun((Math.random()*1e9)|0); startRun(); }
+};
+
+// ---------- boot ----------
+resetRun(G.seed);
+CG.loadingStop(); // game is loaded; title screen is up
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
