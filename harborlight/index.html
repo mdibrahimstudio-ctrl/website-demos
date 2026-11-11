@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Harborlight — Bring every ship home</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="game"></div>
+<p id="caption">Harborlight · Slice 1 prototype — drag anywhere to sweep the light. Lit ships follow it home.</p>
+
+<script>
+  // Smoke-test hook: any boot error lands in the DOM where a headless check can see it.
+  window.addEventListener('error', function (e) {
+    document.body.setAttribute('data-hl-error', (e.message || 'unknown error'));
+  });
+</script>
+<script src="assets/vendor/phaser.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/data.js"></script>
+<script src="js/logic.js"></script>
+<script src="js/save.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/scenes/ui.js"></script>
+<script src="js/scenes/BootScene.js"></script>
+<script src="js/scenes/MenuScene.js"></script>
+<script src="js/scenes/NightSelectScene.js"></script>
+<script src="js/scenes/HarborScene.js"></script>
+<script src="js/scenes/LogbookScene.js"></script>
+<script src="js/scenes/SettingsScene.js"></script>
+<script src="js/scenes/PauseScene.js"></script>
+<script src="js/scenes/NightScene.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
