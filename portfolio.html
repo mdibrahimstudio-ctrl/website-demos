@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ibrahim — Professional Web Developer &amp; Designer</title>
+<meta name="description" content="Professional websites for cafés, salons and local businesses. See a free demo made for your business before you decide anything.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAF6EF; --ink:#16232E; --accent:#E4572E; --card:#FFFFFF;
+    --line:#E4DACA; --muted:#5A6672;
+    --shadow:0 12px 32px rgba(22,35,46,.10);
+    --r-card:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto}
+    *,*::before,*::after{animation:none!important;transition:none!important}
+  }
+  body{background:var(--paper);color:var(--ink);font-family:"Inter",system-ui,sans-serif;font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .skip{position:absolute;left:-999px;top:0;background:var(--ink);color:#fff;padding:12px 20px;border-radius:0 0 12px 0;z-index:50}
+  .skip:focus{left:0}
+  a{color:inherit}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+  .label{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+  h1,h2{font-family:"Fraunces",Georgia,serif;font-weight:640;line-height:1.08;letter-spacing:-.01em}
+  h2{font-size:32px;margin:10px 0 14px}
+  section{padding:64px 0}
+  /* Header */
+  header{position:sticky;top:0;background:rgba(250,246,239,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);z-index:20}
+  .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0}
+  .brand{font-family:"Fraunces",Georgia,serif;font-size:21px;font-weight:640;text-decoration:none}
+  .brand span{color:var(--accent)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 26px;border-radius:999px;font-weight:600;font-size:16px;text-decoration:none;border:2px solid var(--ink);transition:transform .18s ease,background .18s ease,color .18s ease}
+  .btn-solid{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn-solid:hover{background:#C9451F;border-color:#C9451F}
+  .btn-ghost{background:transparent;color:var(--ink)}
+  .btn-ghost:hover{background:var(--ink);color:#fff}
+  .btn-light{background:var(--paper);border-color:var(--paper);color:var(--ink)}
+  .btn-light:hover{background:#fff;border-color:#fff}
+  .bar .btn{min-height:44px;padding:8px 20px;font-size:15px}
+  /* Hero */
+  .hero{padding:88px 0 72px}
+  .hero h1{font-size:clamp(38px,6.2vw,58px);max-width:15ch}
+  .hero h1 em{font-style:italic;color:var(--accent)}
+  .hero p{max-width:56ch;color:var(--muted);margin:22px 0 32px;font-size:19px}
+  .cta-row{display:flex;flex-wrap:wrap;gap:14px}
+  .hero-note{margin-top:20px;font-size:14.5px;color:var(--muted)}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .rise{animation:rise .7s ease both}
+  /* Numbered rows */
+  .rows{border-top:1px solid var(--line)}
+  .row{display:grid;grid-template-columns:72px 1fr;gap:8px 24px;padding:30px 0;border-bottom:1px solid var(--line);align-items:start}
+  .row .num{font-family:"Fraunces",Georgia,serif;font-size:30px;color:var(--accent);line-height:1}
+  .row h3{font-size:20px;font-weight:600;margin-bottom:6px}
+  .row p{color:var(--muted);max-width:62ch}
+  /* Demo cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin-top:8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);box-shadow:var(--shadow);padding:28px;display:flex;flex-direction:column;gap:10px}
+  .card .tag{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+  .card h3{font-family:"Fraunces",Georgia,serif;font-size:23px;font-weight:640}
+  .card p{color:var(--muted);flex:1}
+  .card a{font-weight:600;text-decoration:none;color:var(--ink);display:inline-flex;align-items:center;gap:8px;min-height:44px}
+  .card a:hover{color:var(--accent)}
+  .card a svg{flex:none}
+  /* Process */
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px}
+  .step{border-top:3px solid var(--accent);padding-top:18px}
+  .step .n{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .step h3{font-size:19px;font-weight:600;margin:8px 0 6px}
+  .step p{color:var(--muted)}
+  /* Letter */
+  .letter{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);box-shadow:var(--shadow);padding:40px;max-width:760px}
+  .letter p{margin-bottom:16px}
+  .letter .sig{font-family:"Fraunces",Georgia,serif;font-size:22px;font-style:italic}
+  /* Final band */
+  .band{background:var(--ink);color:#F4EEE3;border-radius:24px;padding:56px 40px;text-align:left}
+  .band h2{color:#fff}
+  .band p{color:#C9D2D8;max-width:52ch;margin-bottom:28px}
+  footer{padding:36px 0 48px;color:var(--muted);font-size:14.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  @media (max-width:640px){
+    section{padding:48px 0}
+    .hero{padding:56px 0 48px}
+    .row{grid-template-columns:48px 1fr}
+    .letter{padding:28px}
+    .band{padding:40px 26px}
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header>
+  <div class="wrap bar">
+    <a class="brand" href="#">Ibrahim<span>.</span></a>
+    <a class="btn btn-solid" href="https://www.instagram.com/mdibrahim.4638" target="_blank" rel="noopener">DM “DEMO” — it’s free</a>
+  </div>
+</header>
+
+<main id="main">
+  <!-- HERO -->
+  <div class="wrap hero rise">
+    <p class="label">Professional Web Developer &amp; Designer</p>
+    <h1>Your business deserves a website as good as <em>your work.</em></h1>
+    <p>I build professional websites for cafés, salons and local businesses — the kind of site that makes a new customer trust you before they ever walk through your door. And I don’t ask you to imagine it: I make you a free demo of your own business first.</p>
+    <div class="cta-row">
+      <a class="btn btn-solid" href="#demos">See live demos</a>
+      <a class="btn btn-ghost" href="https://www.instagram.com/mdibrahim.4638" target="_blank" rel="noopener">Message me on Instagram</a>
+    </div>
+    <p class="hero-note">Free demo first · No pressure, ever · You only decide after you’ve seen your own business online</p>
+  </div>
+
+  <!-- WHAT I BUILD -->
+  <section aria-labelledby="build-h">
+    <div class="wrap">
+      <p class="label">What I build</p>
+      <h2 id="build-h">Everything a customer needs to choose you</h2>
+      <div class="rows">
+        <div class="row">
+          <div class="num" aria-hidden="true">01</div>
+          <div>
+            <h3>A website that feels like your business</h3>
+            <p>Your photos, your prices, your style — designed properly for phones first, because that’s where your customers are looking. Fast to load, easy to read, unmistakably yours.</p>
+          </div>
+        </div>
+        <div class="row">
+          <div class="num" aria-hidden="true">02</div>
+          <div>
+            <h3>Booking and contact, one tap away</h3>
+            <p>Call, WhatsApp, Instagram and booking buttons where a ready customer can’t miss them — so interest turns into appointments instead of scrolling away.</p>
+          </div>
+        </div>
+        <div class="row">
+          <div class="num" aria-hidden="true">03</div>
+          <div>
+            <h3>Trust that shows up on Google</h3>
+            <p>Your reviews, your location and your opening hours, presented the way Google and customers both love — on your own domain, not borrowed space on someone else’s platform.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEMOS -->
+  <section id="demos" aria-labelledby="demo-h" style="padding-top:8px">
+    <div class="wrap">
+      <p class="label">Real examples</p>
+      <h2 id="demo-h">Don’t take my word for it — tap and look</h2>
+      <div class="cards">
+        <article class="card">
+          <p class="tag">Salon demo</p>
+          <h3>Velvet Mane Salon</h3>
+          <p>A full demo homepage for a hair salon — services, prices, gallery and booking, in a warm rose-and-plum style.</p>
+          <a href="https://website-demos-lemon.vercel.app/salon.html" target="_blank" rel="noopener">Open the demo
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </article>
+        <article class="card">
+          <p class="tag">Café demo</p>
+          <h3>The Daily Grind Café</h3>
+          <p>A café homepage with menu highlights and opening hours — the page a customer checks before choosing where to go.</p>
+          <a href="https://website-demos-lemon.vercel.app/cafe.html" target="_blank" rel="noopener">Open the demo
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </article>
+        <article class="card">
+          <p class="tag">Trades demo</p>
+          <h3>Reliable Plumbing Co.</h3>
+          <p>A plumber’s homepage built for one thing: turning a worried searcher into a phone call, fast.</p>
+          <a href="https://website-demos-lemon.vercel.app/plumber.html" target="_blank" rel="noopener">Open the demo
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESS -->
+  <section aria-labelledby="proc-h" style="padding-top:8px">
+    <div class="wrap">
+      <p class="label">How it works</p>
+      <h2 id="proc-h">Three gentle steps, nothing to lose</h2>
+      <div class="steps">
+        <div class="step">
+          <p class="n">Step one</p>
+          <h3>Say hello</h3>
+          <p>Message me “DEMO” on Instagram and tell me a little about your business. That’s all I need to start.</p>
+        </div>
+        <div class="step">
+          <p class="n">Step two</p>
+          <h3>See your free demo</h3>
+          <p>I build a demo homepage for your actual business and send you the link. Look at it on your phone, in your own time.</p>
+        </div>
+        <div class="step">
+          <p class="n">Step three</p>
+          <h3>Decide, calmly</h3>
+          <p>If you love it, we talk about building the real thing — your photos, your prices, your domain. If not, the demo was free and the coffee’s on me, metaphorically…</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LETTER -->
+  <section aria-labelledby="letter-h" style="padding-top:8px">
+    <div class="wrap">
+      <div class="letter">
+        <p class="label">A short note</p>
+        <h2 id="letter-h" style="font-size:26px">Why I work this way</h2>
+        <p>I know a website is a big decision for a small business. Money is real, and trust has to be earned — so I’d rather show you your own business, beautifully online, than talk you into anything.</p>
+        <p>If the demo makes you smile, imagine what the real one will do for your customers.</p>
+        <p class="sig">— Ibrahim</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section style="padding-top:8px">
+    <div class="wrap">
+      <div class="band">
+        <h2>Ready to see your business online?</h2>
+        <p>Send me the word “DEMO” on Instagram. Your free demo comes first — your decision comes after, with no pressure from me at any point.</p>
+        <a class="btn btn-light" href="https://www.instagram.com/mdibrahim.4638" target="_blank" rel="noopener">DM “DEMO” on Instagram</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;width:100%">
+    <span>Ibrahim — Professional Web Developer &amp; Designer</span>
+    <span>Demos are samples; your real website is built with your own photos, prices and style.</span>
+  </div>
+</footer>
+</body>
+</html>
